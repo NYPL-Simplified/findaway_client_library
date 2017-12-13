@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="org.nypl.audiobookplaybacklibrary.PlayBookActivity">
+
+    <!-- The FrameLayout serves as a container, into which we will load various content frames. -->
+    <!-- Start with the book selector fragment, then through the java code will replace this with the player-related fragment. -->
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:id="@+id/fragment_container"
+                 android:layout_width="match_parent"
+                 android:layout_height="match_parent">
+        <!-- were both match_parent -->
+    </FrameLayout>
+
+</LinearLayout>

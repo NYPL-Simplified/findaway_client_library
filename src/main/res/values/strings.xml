@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">findaway_client_library</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="download">Download</string>
+    <string name="pause">Pause</string>
+    <string name="play">Play</string>
+    <string name="resume">Resume</string>
+
+    <string name="chapterPercentage">Chapter %d%%</string>
+    <string name="contentPercentage">Total %d%%</string>
+
+    <string name="downloadStarted">Download started.</string>
+    <string name="downloadPaused">Download paused.</string>
+    <string name="downloadCancelled">Download cancelled.</string>
+    <string name="downloadComplete">Download complete.</string>
+    <string name="deleteComplete">Delete complete.</string>
+
+    <string name="chapterDownloaded">%s downloaded.</string>
+</resources>
