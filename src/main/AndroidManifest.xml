@@ -1,13 +1,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-
-          package="org.nypl.findawayclientlibrary"
->
+          xmlns:tools="http://schemas.android.com/tools"
+          package="org.nypl.findawayclientlibrary">
 
     <application android:allowBackup="true"
                  android:label="@string/app_name"
                  android:supportsRtl="true"
-    >
+                 android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+                 tools:replace="android:theme">
 
+        <!-- Must not use system action bar, so can use toolbar.  Must specify NoActionBar in
+         individual activity declaration, specifying generally in the manifest's application element doesn't work. -->
+        <!-- Setting the parent activity allows the action toolbar's "up" button to work. Setting it to -->
+        <!-- TODO: consider adding android:launchMode="singleTop", as per https://stackoverflow.com/questions/12276027/how-can-i-return-to-a-parent-activity-correctly -->
+        <activity android:name="org.nypl.findawayclientlibrary.PlayBookActivity"
+                  android:screenOrientation="portrait"
+                  android:theme="@style/AppTheme_NoActionBar"
+                  android:label="@string/title_activity_playbook">
+            <!-- works, but use calling intent from code instead, to not break fourth wall android:parentActivityName="org.nypl.audiobooklibrarydemoapp.MainDemoActivity" -->
+        </activity>
     </application>
 
 </manifest>

@@ -12,6 +12,10 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
+        // NOTE: need this line to build findaway library module, but beware -- this fix is deprecated.
+        // Why need it?  Because see
+        // <orderEntry type="library" name="com.google.auto.value:auto-value:1.3@jar" level="project" />
+        // in findawaylibrary.iml .
         javaCompileOptions.annotationProcessorOptions.includeCompileClasspath = true
     }
     buildTypes {

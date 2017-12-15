@@ -209,10 +209,10 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.playback_activity_main);
+    setContentView(R.layout.findaway_playback_activity_main);
 
     // change the title displayed in the top bar from the app name (default) to something indicative
-    getSupportActionBar().setTitle("Audio Player UI Here");
+    //getSupportActionBar().setTitle("Audio Player UI Here");
 
     // Check that the activity is using the layout version with the fragment_container FrameLayout
     if (findViewById(R.id.fragment_container) != null) {

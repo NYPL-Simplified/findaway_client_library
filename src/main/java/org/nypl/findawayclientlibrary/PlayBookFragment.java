@@ -56,7 +56,7 @@ public class PlayBookFragment extends BaseFragment {
     // do not call super, as it returns a null, prevents onViewCreated from auto-running, and prevents getView() from working later in the code.
     //return super.onCreateView(inflater, container, savedInstanceState);
 
-    return inflater.inflate(R.layout.fragment_play_book, container, false);
+    return inflater.inflate(R.layout.findaway_fragment_play_book, container, false);
   }
 
 

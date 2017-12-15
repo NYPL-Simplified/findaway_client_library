@@ -1,0 +1,34 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme_NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <!-- windowActionBar is same as android:windowActionBar, but AppCompat stuff looks at the app namespace attribute not the android one.
+        This makes it possible to specify the attribute even in platforms that didn't originally have it.
+        Having said that, might not need these if have NoActionBar. -->
+        <!-- item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item -->
+    </style>
+
+
+    <!-- changes the overflow button in the action toolbar, but
+    we're doing it from java code
+    <style name="AppTheme.Base" parent="ThemeOverlay.AppCompat.ActionBar">
+        <item name="actionOverflowButtonStyle">@style/OverFlow</item>
+    </style>
+    <style name="OverFlow" parent="Widget.AppCompat.ActionButton.Overflow">
+        <item name="android:src">@drawable/timer_dark</item>
+    </style -->
+
+
+    <style name="TableOfContents_TextAppearance">
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar"/>
+
+</resources>
