@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="org.nypl.audiobookplaybacklibrary.PlayBookActivity">
+    tools:context="org.nypl.findawayclientlibrary.PlayBookActivity">
 
     <!-- The FrameLayout serves as a container, into which we will load various content frames. -->
     <!-- Start with the book selector fragment, then through the java code will replace this with the player-related fragment. -->
