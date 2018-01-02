@@ -89,26 +89,26 @@ public class PlayBookFragment extends BaseFragment {
    */
   private void initializeControlsUI(View view) {
     // set up the UI elements that will give download info
-    downloadButton = (Button) fragmentView.findViewById(R.id.download_button);
+    //downloadButton = (Button) fragmentView.findViewById(R.id.download_button);
     downloadProgress = (ProgressBar) fragmentView.findViewById(R.id.download_progress);
     chapterPercentage = (TextView) fragmentView.findViewById(R.id.chapter_download_percentage);
     contentPercentage = (TextView) fragmentView.findViewById(R.id.content_download_percentage);
 
     // tell the download buttons the parent activity will be listening to them
-    downloadButton.setOnClickListener((View.OnClickListener) callbackActivity);
-    downloadButton.setOnLongClickListener((View.OnLongClickListener) callbackActivity);
+    //downloadButton.setOnClickListener((View.OnClickListener) callbackActivity);
+    //downloadButton.setOnLongClickListener((View.OnLongClickListener) callbackActivity);
 
     // set up the UI elements that will give playback info
-    previousButton = (ImageButton) fragmentView.findViewById(R.id.previous);
-    backButton = (ImageButton) fragmentView.findViewById(R.id.back10);
-    playButton = (ImageButton) fragmentView.findViewById(R.id.play);
-    forwardButton = (ImageButton) fragmentView.findViewById(R.id.forward10);
-    nextButton = (ImageButton) fragmentView.findViewById(R.id.next);
+    previousButton = (ImageButton) fragmentView.findViewById(R.id.previous_track_button);
+    backButton = (ImageButton) fragmentView.findViewById(R.id.rewind_button);
+    playButton = (ImageButton) fragmentView.findViewById(R.id.play_pause_button);
+    forwardButton = (ImageButton) fragmentView.findViewById(R.id.forward_button);
+    nextButton = (ImageButton) fragmentView.findViewById(R.id.next_track_button);
     playbackSeekBar = (SeekBar) fragmentView.findViewById(R.id.playback_seek_bar);
-    playbackSpeedButton = (ToggleButton) fragmentView.findViewById(R.id.playback_speed_button);
+    //playbackSpeedButton = (ToggleButton) fragmentView.findViewById(R.id.playback_speed_button);
 
-    currentTime = (TextView) fragmentView.findViewById(R.id.position);
-    remainingTime = (TextView) fragmentView.findViewById(R.id.remaining);
+    currentTime = (TextView) fragmentView.findViewById(R.id.current_playback_position);
+    remainingTime = (TextView) fragmentView.findViewById(R.id.playback_time_remaining);
 
     // tell the playback buttons the parent activity will be listening to them
     previousButton.setOnClickListener((View.OnClickListener) callbackActivity);
@@ -117,7 +117,7 @@ public class PlayBookFragment extends BaseFragment {
     forwardButton.setOnClickListener((View.OnClickListener) callbackActivity);
     nextButton.setOnClickListener((View.OnClickListener) callbackActivity);
     playbackSeekBar.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) callbackActivity);
-    playbackSpeedButton.setOnClickListener((View.OnClickListener) callbackActivity);
+    //playbackSpeedButton.setOnClickListener((View.OnClickListener) callbackActivity);
 
     playButton.setTag(getResources().getString(R.string.play));
 
@@ -129,7 +129,7 @@ public class PlayBookFragment extends BaseFragment {
    * Change the message on the download button, letting the user know where we are in the downloading progress.
    */
   public void redrawDownloadButton(String newText) {
-    downloadButton.setText(newText);
+    //downloadButton.setText(newText);
   }
 
 
@@ -199,7 +199,7 @@ public class PlayBookFragment extends BaseFragment {
    * @param checked
    */
   public void redrawSpeedButton(boolean checked) {
-    playbackSpeedButton.setChecked(checked);
+    //playbackSpeedButton.setChecked(checked);
   }
 
 

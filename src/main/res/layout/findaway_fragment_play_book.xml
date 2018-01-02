@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:weightSum="3"
+              tools:context="org.nypl.findawayclientlibrary.PlayBookActivity"
+    -->
 <android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -6,9 +15,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:weightSum="3"
     tools:context="org.nypl.findawayclientlibrary.PlayBookActivity"
-    tools:layout_editor_absoluteY="81dp">
+    >
 
     <android.support.constraint.Guideline
         android:id="@+id/left_guideline"
@@ -18,34 +26,138 @@
         app:layout_constraintGuide_percent="0.25"/>
 
     <android.support.constraint.Guideline
+        android:id="@+id/left_controls_guideline_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.10"/>
+
+    <android.support.constraint.Guideline
+        android:id="@+id/left_controls_guideline_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.20"/>
+
+    <android.support.constraint.Guideline
         android:id="@+id/right_guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.75"/>
 
-
-    <Button
-        android:id="@+id/download_button"
+    <android.support.constraint.Guideline
+        android:id="@+id/right_controls_guideline_1"
         android:layout_width="wrap_content"
-        android:layout_height="52dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.80"/>
+
+    <android.support.constraint.Guideline
+        android:id="@+id/right_controls_guideline_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.90"/>
+
+    <android.support.constraint.Guideline
+        android:id="@+id/bottom_seekbar_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.70"/>
+
+    <android.support.constraint.Guideline
+        android:id="@+id/bottom_buttons_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.85"/>
+
+
+    <!-- LinearLayout
+        android:id="@+id/middle_info_area"
+        android:layout_width="match_parent"
+        android:layout_height="0px"
+        android:layout_weight="2"
+        android:background="@drawable/default_cover_image_gradient_list"
+        android:gravity="center_horizontal"
+        android:orientation="vertical" -->
+
+    <View
+        android:id="@+id/middle_info_area_background"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/default_cover_image_gradient_list"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.108"/>
+        app:layout_constraintBottom_toTopOf="@id/bottom_seekbar_guideline"
+        app:layout_constraintTop_toTopOf="parent">
+    </View>
+
+    <!-- NOTE: Another option for ellipsize is marquee, to display name auto sliding from right to left. -->
+    <TextView
+        android:id="@+id/book_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="14dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif"
+        android:gravity="center_horizontal"
+        android:maxLines="2"
+        android:paddingEnd="10sp"
+        android:paddingStart="10sp"
+        android:text="21: The Great Story"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:contentDescription="@string/book_title_view"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView
-        android:id="@+id/chapter_download_percentage"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginBottom="4dp"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintBottom_toBottomOf="@+id/download_progress"
-        app:layout_constraintEnd_toStartOf="@+id/download_progress"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="@+id/left_guideline"/>
+        android:id="@+id/book_author_full_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="14dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif"
+        android:gravity="center_horizontal"
+        android:maxLines="2"
+        android:paddingEnd="10sp"
+        android:paddingStart="10sp"
+        android:text="Alice Author"
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:contentDescription="@string/author_name_view"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/book_title"/>
+
+    <TextView
+        android:id="@+id/book_narrator_full_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="10dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif"
+        android:gravity="center_horizontal"
+        android:maxLines="2"
+        android:paddingEnd="10sp"
+        android:paddingStart="10sp"
+        android:text="Bob Narrator Jr."
+        android:textSize="14sp"
+        android:textStyle="normal"
+        android:contentDescription="@string/narrator_name_view"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/book_author_full_name"/>
 
     <ProgressBar
         android:id="@+id/download_progress"
@@ -60,8 +172,19 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/right_guideline"
         app:layout_constraintStart_toStartOf="@+id/left_guideline"
-        app:layout_constraintTop_toBottomOf="@+id/download_button"
+        app:layout_constraintTop_toBottomOf="@+id/book_narrator_full_name"
         app:layout_constraintVertical_bias="0.137"/>
+
+    <TextView
+        android:id="@+id/chapter_download_percentage"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="4dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintBottom_toBottomOf="@+id/download_progress"
+        app:layout_constraintEnd_toStartOf="@+id/download_progress"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/left_guideline"/>
 
     <TextView
         android:id="@+id/content_download_percentage"
@@ -74,92 +197,163 @@
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toEndOf="@+id/download_progress"/>
 
-    <TextView
-        android:id="@+id/position"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:text="00:00:00"
-        app:layout_constraintBottom_toTopOf="@+id/playback_seek_bar"
-        app:layout_constraintStart_toStartOf="@+id/left_guideline"/>
-
-    <TextView
-        android:id="@+id/remaining"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:text="00:00:00"
-        app:layout_constraintBottom_toTopOf="@+id/playback_seek_bar"
-        app:layout_constraintEnd_toStartOf="@+id/right_guideline"/>
-
-
-    <SeekBar
-        android:id="@+id/playback_seek_bar"
-        style="?android:attr/progressBarStyleHorizontal"
+    <!-- Contains the book cover image. -->
+    <ImageView
+        android:id="@+id/cover_image"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:secondaryProgressTint="@color/colorPrimaryDark"
-        android:secondaryProgressTintMode="src_atop"
+        android:layout_marginEnd="14dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="10dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/book_cover_image_view"
+        android:minHeight="100dp"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/right_guideline"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/download_progress"
-        app:layout_constraintVertical_bias="0.64"/>
+        app:layout_constraintTop_toBottomOf="@+id/book_narrator_full_name"/>
+
+
+        <!-- android.support.constraint.ConstraintLayout
+        android:weightSum="3"
+        tools:layout_editor_absoluteY="81dp" -->
+
+    <!-- Button
+        android:id="@+id/download_button"
+        android:layout_width="wrap_content"
+        android:layout_height="52dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.108"/ -->
+
+
+
+        <!-- /android.support.constraint.ConstraintLayout -->
+
+    <!--/LinearLayout--> <!-- middle_info_area -->
+
+
+    <!-- LinearLayout
+        android:id="@+id/bottom_nav_bar_media_controls"
+        android:layout_width="match_parent"
+        android:layout_height="0px"
+        android:layout_weight="1"
+        android:weightSum="3"
+        android:backgroundTint="@android:color/holo_blue_light"
+        android:orientation="vertical" -->
+
+        <!-- Playback positioning feedback goes in this section. -->
+        <!-- LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:weightSum="5"
+            -->
+
+            <TextView
+                android:id="@+id/current_playback_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="00:00:00"
+                app:layout_constraintTop_toBottomOf="@id/bottom_seekbar_guideline"
+                app:layout_constraintStart_toStartOf="@id/left_guideline"/>
+
+            <TextView
+                android:id="@+id/playback_time_remaining"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="00:00:00"
+                app:layout_constraintTop_toBottomOf="@id/bottom_seekbar_guideline"
+                app:layout_constraintEnd_toStartOf="@id/right_guideline"/>
+
+
+            <SeekBar
+                android:id="@+id/playback_seek_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:secondaryProgressTint="@color/colorPrimaryDark"
+                android:secondaryProgressTintMode="src_atop"
+
+                app:layout_constraintTop_toBottomOf="@id/bottom_seekbar_guideline"
+                app:layout_constraintEnd_toStartOf="@id/playback_time_remaining"
+                app:layout_constraintStart_toEndOf="@id/current_playback_position"
+                />
+
+        <!-- /LinearLayout -->
+
+
+    <!-- Playback control buttons go in this section. -->
+    <!-- LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:weightSum="5"
+        -->
 
 
     <ImageButton
-        android:id="@+id/previous"
-        android:layout_width="wrap_content"
+        android:id="@+id/previous_track_button"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
-        android:src="@drawable/ic_skip_previous_black_24dp"
-        app:layout_constraintEnd_toStartOf="@+id/back10"
-        app:layout_constraintTop_toTopOf="@+id/play"/>
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@string/skip_to_prev_chapter_button"
+        app:srcCompat="@drawable/ic_skip_previous_black_24dp"
+        app:layout_constraintRight_toLeftOf="@id/left_controls_guideline_1"
+        app:layout_constraintTop_toBottomOf="@id/bottom_buttons_guideline"/>
 
     <ImageButton
-        android:id="@+id/back10"
-        android:layout_width="wrap_content"
+        android:id="@+id/rewind_button"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
-        android:src="@drawable/ic_replay_10_black_24dp"
-        app:layout_constraintEnd_toStartOf="@+id/play"
-        app:layout_constraintTop_toTopOf="@+id/play"/>
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@string/rewind_button"
+        app:srcCompat="@drawable/ic_replay_10_black_24dp"
+        app:layout_constraintLeft_toLeftOf="@id/left_controls_guideline_2"
+        app:layout_constraintTop_toBottomOf="@id/bottom_buttons_guideline"/>
 
     <ImageButton
-        android:id="@+id/play"
-        android:layout_width="wrap_content"
+        android:id="@+id/play_pause_button"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:src="@drawable/ic_play_circle_outline_black_24dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/playback_seek_bar"/>
+        android:contentDescription="@string/pause_playback_button"
+        app:srcCompat="@drawable/ic_play_circle_outline_black_24dp"
+        app:layout_constraintLeft_toRightOf="@id/rewind_button"
+        app:layout_constraintRight_toLeftOf="@id/forward_button"
+        app:layout_constraintTop_toBottomOf="@id/bottom_buttons_guideline"/>
 
     <ImageButton
-        android:id="@+id/forward10"
-        android:layout_width="wrap_content"
+        android:id="@+id/forward_button"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:src="@drawable/ic_forward_10_black_24dp"
-        app:layout_constraintStart_toEndOf="@+id/play"
-        app:layout_constraintTop_toTopOf="@+id/play"/>
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@string/fast_forward_button"
+        app:srcCompat="@drawable/ic_forward_10_black_24dp"
+        app:layout_constraintRight_toRightOf="@+id/right_controls_guideline_1"
+        app:layout_constraintTop_toBottomOf="@id/bottom_buttons_guideline"/>
 
     <ImageButton
-        android:id="@+id/next"
-        android:layout_width="wrap_content"
+        android:id="@+id/next_track_button"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:src="@drawable/ic_skip_next_black_24dp"
-        app:layout_constraintStart_toEndOf="@+id/forward10"
-        app:layout_constraintTop_toTopOf="@+id/play"/>
+        android:background="?selectableItemBackgroundBorderless"
+        android:contentDescription="@string/skip_to_next_chapter_button"
+        app:srcCompat="@drawable/ic_skip_next_black_24dp"
+        app:layout_constraintRight_toRightOf="@+id/right_controls_guideline_2"
+        app:layout_constraintTop_toBottomOf="@id/bottom_buttons_guideline"/>
 
-    <ToggleButton
+    <!--ToggleButton
         android:id="@+id/playback_speed_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -171,7 +365,9 @@
         android:textOn="x2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/right_guideline"
-        app:layout_constraintStart_toStartOf="@+id/left_guideline"/>
+        app:layout_constraintStart_toStartOf="@+id/left_guideline"/-->
 
+        <!--/LinearLayout-->
+    <!--/LinearLayout--> <!-- bottom_nav_bar_media_controls -->
 
 </android.support.constraint.ConstraintLayout>

@@ -4,9 +4,22 @@ package org.nypl.findawayclientlibrary;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
+
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
+
 import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.widget.Toolbar;
+
 import android.util.Log;
+
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -34,6 +47,8 @@ import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
+// TODO: don't have LogHelper in both libraries
+import org.nypl.findawayclientlibrary.util.LogHelper;
 
 
 
@@ -126,10 +141,8 @@ import rx.schedulers.Schedulers;
  * currently have an easy-to-check code.  The session expiring could probably be found in the error message.  Since it's a rare event, it'd
  * be OK to resolve all major errors by obtaining a new session key and re-trying the download.
  */
-public class PlayBookActivity extends BaseActivity implements View.OnClickListener, View.OnLongClickListener,
-                                                              Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
-  // so can filter all log msgs belonging to my app
-  private static final String APP_TAG = "FDLIB.";
+public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
+        View.OnClickListener, View.OnLongClickListener, Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
   // so can do a search in log msgs for just this class's output
   private static final String TAG = APP_TAG + "PlayBookActivity";
 
@@ -193,6 +206,11 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
   long lastPlaybackPosition;
 
+  DrawerLayout drawerLayout;
+  ActionBarDrawerToggle actionBarDrawerToggle;
+  NavigationView tocNavigationView;
+
+
 
   /* ---------------------------------- LIFECYCLE METHODS ----------------------------------- */
 
@@ -213,6 +231,43 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
     // change the title displayed in the top bar from the app name (default) to something indicative
     //getSupportActionBar().setTitle("Audio Player UI Here");
+
+    // set the top menu toolbar
+    Toolbar toolbar = (Toolbar) findViewById(R.id.top_nav_toolbar);
+    // changes the left icon, which by default is the material design back arrow
+    //toolbar.setNavigationIcon(R.drawable.menu_icon_books);
+    toolbar.setOverflowIcon(getResources().getDrawable(R.drawable.toc_dark));
+
+    setSupportActionBar(toolbar);
+
+    // NOTE: setDisplayHomeAsUpEnabled makes the icon and title in the action bar clickable and adds a "<-", so that "up" (ancestral) navigation can be provided.
+    // setHomeButtonEnabled is like setDisplayHomeAsUpEnabled, except "<-" doesn’t show up unless the android:parentActivityName is specified.
+    // setDisplayShowHomeEnabled controls whether to show the Activity icon/logo or not.
+
+    // NOTE: the back/up button knows where to go by the parentActivity declared in the manifest.
+    // getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+    // remove the title displayed in the top bar, we'll need the space for menu buttons
+    getSupportActionBar().setTitle(null);
+
+    // drawer_layout is defined in playback_activity_main.xml, and contains both the toolbar and the TOC ListView
+    drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+
+    actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+    // do not display the burger "open drawer" icon or the <- "close drawer" icon
+    actionBarDrawerToggle.setDrawerIndicatorEnabled(false);
+
+    drawerLayout.addDrawerListener(actionBarDrawerToggle);
+    actionBarDrawerToggle.syncState();
+    tocNavigationView = (NavigationView) findViewById(R.id.toc_drawer_view);
+    tocNavigationView.setNavigationItemSelectedListener(this);
+
+    // make sure we're allowed to proceed to starting the media session
+    boolean allowedToProceed = checkAppPermissions();
+    if (!allowedToProceed) {
+      // TODO: future branch: go to My Books, and throw a notification explaining why.
+      LogHelper.e(TAG, "PlayBookActivity.onCreate: Did not get needed permissions from user.");
+    }
 
     // Check that the activity is using the layout version with the fragment_container FrameLayout
     if (findViewById(R.id.fragment_container) != null) {
@@ -252,6 +307,12 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
             //bookId = extras.getString("audiobook_id", null);
         }
       }
+
+      //if (bookId == null) {
+        // TODO: when code for error message toasts, display an error message here and don't load player UI.
+      //}
+
+      //LogHelper.d(TAG, "bookId=" + bookId);
     }
 
 
@@ -437,6 +498,54 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   /* ---------------------------------- /LIFECYCLE METHODS ----------------------------------- */
 
 
+  /* ------------------------------------ NAVIGATION EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * A chapter got clicked in the table of contents menu.  Play that chapter,
+   * and visibly mark it as selected in the menu.
+   *
+   * @param item
+   * @return
+   */
+  @Override
+  public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+    // TODO: gray highlight isn't appearing, previously selected chapter's icon isn't resetting
+
+    int checkedItemId = item.getItemId();
+
+    final Menu navMenu = tocNavigationView.getMenu();
+    int menuSize = navMenu.size();
+    for (int i=0; i<menuSize; i++) {
+      MenuItem menuItem = navMenu.getItem(i);
+      // unselect the menu item if it's not our selected one
+      // NOTE: if doesn't work, try invisible menu item, like in https://stackoverflow.com/questions/36051045/how-to-uncheck-checked-items-in-navigation-view/39017882
+      if (menuItem.getItemId() != checkedItemId) {
+        menuItem.setChecked(false);
+
+        if (menuItem.getGroupId() == R.id.group_chapter_menu) {
+          // if menu item has a chapter icon, draw the "unchecked" version
+          menuItem.setIcon(R.drawable.ic_radio_button_unchecked_black_24dp);
+          LogHelper.d(TAG, "I definitely set it");
+        }
+      }
+    }
+
+    // set the selected chapter's icon to "checked"
+    item.setChecked(true);
+    tocNavigationView.setCheckedItem(checkedItemId);
+    item.setIcon(R.drawable.ic_radio_button_checked_black_24dp);
+
+    // TODO: start playing the selected chapter
+    //audioService.setChapterPosition(0);
+    //audioService.playTrack();
+
+    drawerLayout.closeDrawer(GravityCompat.END);
+    return true;
+  }
+
+
+  /* ------------------------------------ /NAVIGATION EVENT HANDLERS ------------------------------------- */
+
 
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
 
@@ -583,6 +692,8 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
   @Override
   public void onClick(View view) {
+    // TODO: the download should start automatically, when needed
+/*
     if (view.getId() == R.id.download_button) {
 
       Button downloadButton = (Button) view;
@@ -603,9 +714,9 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
         downloadEngine.delete(DeleteRequest.builder().contentId(contentId).build());
       }
     }
+*/
 
-
-    if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.play))) {
+    if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.play))) {
       Log.d(TAG, "playback PLAY button clicked");
 
       // NOTE: Can specify the chapter to start playing at here.
@@ -615,7 +726,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
       }
 
     } else {
-        if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.pause))) {
+        if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.pause))) {
         Log.d(TAG, "playback PAUSE button clicked");
         playbackEngine.pause();
 
@@ -624,7 +735,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
         }
 
       } else {
-        if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.resume))) {
+        if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.resume))) {
           Log.d(TAG, "playback RESUME button clicked");
           playbackEngine.resume();
 
@@ -632,21 +743,23 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
             playBookFragment.redrawPlayButton(getResources().getString(R.string.pause), R.drawable.ic_pause_circle_outline_black_24dp);
           }
         } else {
-          if (view.getId() == R.id.back10) {
+          if (view.getId() == R.id.rewind_button) {
             // TODO: what code would make sure not crossing boundary condition on file length?
             Log.d(TAG, "playback BACK10 button clicked");
             playbackEngine.seekTo(playbackEngine.getPosition() - 10000);
           } else {
-            if (view.getId() == R.id.forward10) {
+            if (view.getId() == R.id.forward_button) {
               Log.d(TAG, "playback FWD10 button clicked");
               playbackEngine.seekTo(playbackEngine.getPosition() + 10000);
             } else {
-              if (view.getId() == R.id.previous) {
+              if (view.getId() == R.id.previous_track_button) {
                 playbackEngine.previousChapter();
               } else {
-                if (view.getId() == R.id.next) {
+                if (view.getId() == R.id.next_track_button) {
                   playbackEngine.nextChapter();
                 } else {
+                  /*
+                 // TODO: call from drop-down menu
                   if (view.getId() == R.id.playback_speed_button) {
                     // change playback speed
                     if (((ToggleButton) view).isSelected() == true) {
@@ -662,8 +775,9 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
                       ((ToggleButton) view).setSelected(true);
                     }
                   } else {
+                    */
                     Log.e(TAG, "Cannot recognize clicked button.");
-                  }
+                  //}
                 }
               }
             }
@@ -707,7 +821,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
   @Override
   public boolean onLongClick(View view) {
-
+    /* TODO
     if (view.getId() == R.id.download_button) {
 
       Button downloadButton = (Button) view;
@@ -719,7 +833,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
         return true;
       }
     }
-
+  */
     return false;
   }
 
