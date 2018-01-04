@@ -17,7 +17,7 @@ import org.nypl.findawayclientlibrary.BaseFragment;
  */
 public class BaseActivity extends AppCompatActivity implements BaseFragment.ReplaceFragmentListener {
   // so can filter all log msgs belonging to my app
-  public static final String APP_TAG = "AUDLIB.";
+  public static final String APP_TAG = "FSLIB.";
   // so can do a search in log msgs for just this class's output
   private static final String TAG = APP_TAG + "BaseActivity";
 

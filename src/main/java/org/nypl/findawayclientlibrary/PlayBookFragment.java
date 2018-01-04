@@ -1,5 +1,8 @@
 package org.nypl.findawayclientlibrary;
 
+import android.content.res.AssetManager;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
@@ -7,10 +10,21 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.bugsnag.android.BreadcrumbType;
+import com.bugsnag.android.Bugsnag;
+
+import org.nypl.findawayclientlibrary.util.LogHelper;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
 
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.PlaybackEvent;
@@ -28,12 +42,14 @@ import io.audioengine.mobile.util.StringUtils;
  */
 public class PlayBookFragment extends BaseFragment {
   // so can filter all log msgs belonging to my app
-  private final String APP_TAG = "FDLIB.";
+  //private final String APP_TAG = "FSLIB.";
 
   // so can do a search in log msgs for just this class's output
   private final String TAG = APP_TAG + "PlayBookFragment";
 
   private View fragmentView = null;
+
+  private ImageView coverImage;
 
   private Button downloadButton;
   // non-user-interactive, usually used to show download progress
@@ -78,16 +94,22 @@ public class PlayBookFragment extends BaseFragment {
     // save the view handle, for future convenience
     fragmentView = view;
 
-    initializeControlsUI(view);
+    initializeControlsUI();
+
+    initializeDefaultCover();
   }
 
 
   /**
    * Hooking up media controls to UI play/pause/etc. buttons goes here.
-   *
-   * @param view
    */
-  private void initializeControlsUI(View view) {
+  private void initializeControlsUI() {
+    if (fragmentView == null) {
+      // something is very very wrong, we cannot proceed
+      LogHelper.e(TAG, "initializeControlsUI() encountered a null fragmentView");
+      throw new Error(TAG + ": initializeControlsUI() encountered a null fragmentView");
+    }
+
     // set up the UI elements that will give download info
     //downloadButton = (Button) fragmentView.findViewById(R.id.download_button);
     downloadProgress = (ProgressBar) fragmentView.findViewById(R.id.download_progress);
@@ -126,6 +148,41 @@ public class PlayBookFragment extends BaseFragment {
 
 
   /**
+   * If a book doesn't have a cover image, this sets up the default image to be displayed.
+   * Currently, the default is a gradient animation that's the background of the cover image-holding view.
+   * When a cover image is loaded, it layers on top of the animation.
+   */
+  private void initializeDefaultCover() {
+    if (fragmentView == null) {
+      // something is very very wrong, and not just with the imge display area; we cannot proceed
+      LogHelper.e(TAG, "initializeDefaultCover() encountered a null fragmentView");
+      throw new Error(TAG + ": initializeDefaultCover() encountered a null fragmentView");
+    }
+
+    View middlePane = fragmentView.findViewById(R.id.middle_info_area_background);
+    if (middlePane == null) {
+      // should never happen, but app shouldn't crash on cover image processing
+      LogHelper.e(TAG, "initializeDefaultCover() encountered a null middlePane");
+      return;
+    }
+    AnimationDrawable animationDrawable = (AnimationDrawable) middlePane.getBackground();
+    if (animationDrawable == null) {
+      // should never happen, but app shouldn't crash on cover image processing
+      LogHelper.e(TAG, "initializeDefaultCover() encountered a null animationDrawable");
+      return;
+    }
+    animationDrawable.setEnterFadeDuration(4000);
+    animationDrawable.setExitFadeDuration(4000);
+
+    // make sure to only call start animation once the animation is fully attached to the view
+    animationDrawable.start();
+
+    // TODO: move the call for loadCoverImage() from here to the method that will load the book's metadata in a later branch.
+    loadCoverImage();
+  }
+
+
+  /**
    * Change the message on the download button, letting the user know where we are in the downloading progress.
    */
   public void redrawDownloadButton(String newText) {
@@ -140,6 +197,8 @@ public class PlayBookFragment extends BaseFragment {
    * @param newImageId
    */
   public void redrawPlayButton(String newText, int newImageId) {
+    // TODO: check that code works on kitkat.  if yes, then don't need the "if (checkAndroidVersion() < Build.VERSION_CODES.LOLLIPOP) {"
+    // line in audiobookplaylibrary/PlayBookFragment.  if no, then need that line here.
     playButton.setImageResource(newImageId);
     playButton.setTag(newText);
   }
@@ -210,6 +269,64 @@ public class PlayBookFragment extends BaseFragment {
   /* ---------------------------------- /LIFECYCLE METHODS ----------------------------------- */
 
   /* ------------------------------------ NAVIGATION EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Load a book cover image, properly scaled, into the middle view pane.
+   * TODO:  in future branch, this should get populated from loaded metadata.
+   */
+  public void loadCoverImage() {
+    // leave note for BugSnag that we've tried to load an image
+    Bugsnag.leaveBreadcrumb(getString(R.string.logtag_cover_image), BreadcrumbType.NAVIGATION, new HashMap<String, String>());
+
+    if (fragmentView == null) {
+      // something is very very wrong, and not just with the image display area; we cannot proceed
+      LogHelper.e(TAG, "loadCoverImage() encountered a null fragmentView");
+      throw new Error(TAG + ": loadCoverImage() encountered a null fragmentView");
+    }
+
+    coverImage = (ImageView) fragmentView.findViewById(R.id.cover_image);
+    if (coverImage == null) {
+      // you know what?  missing a piece of UI scenery is probably a symptom of a larger problem,
+      // and definitely should not happen, but ultimately, we can play a book without displaying a cover.
+      // exit the method, and don't throw an exception
+      LogHelper.e(TAG, "loadCoverImage() encountered a null coverImage");
+      return;
+    }
+
+    //Uri myUri = Uri.parse("file:///android_asset/a21_gun_salute/a1752599_001_c001.mp3"); // initialize Uri here
+    String coverImageFilePath = "21_gun_salute/1752599_image_512x512_iTunes.png";
+
+    // NOTE:  Library modules cannot include raw assets, which are expected to live in the containing app.
+    AssetManager assetManager = getResources().getAssets();
+    InputStream coverImageStream = null;
+
+    try {
+      coverImageStream = assetManager.open(coverImageFilePath);
+
+      // load image as Drawable
+      Drawable coverImageDrawable = Drawable.createFromStream(coverImageStream, "Book Cover Image");
+      if (coverImageDrawable != null) {
+        coverImage.setImageDrawable(coverImageDrawable);
+
+        coverImageDrawable.getBounds();
+      }
+    } catch (IOException e) {
+      // throw a quick unobtrusive toast, and a descriptive log message
+      Toast.makeText(getContext(), R.string.cannot_load_image_file, Toast.LENGTH_LONG).show();
+      LogHelper.e(TAG, e, "loadCoverImage() could not read from file.");
+    } finally {
+      if (coverImageStream != null) {
+        try {
+          coverImageStream.close();
+        } catch (IOException e) {
+          // user doesn't need to see this one, only print to log
+          LogHelper.e(TAG, "loadCoverImage() could not close coverImageStream.", e);
+        }
+      }
+    }
+
+  } //loadCoverImage
+
 
   /* ------------------------------------ /NAVIGATION EVENT HANDLERS ------------------------------------- */
 

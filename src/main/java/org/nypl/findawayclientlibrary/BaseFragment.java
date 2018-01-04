@@ -2,7 +2,7 @@ package org.nypl.findawayclientlibrary;
 
 import android.app.Activity;
 import android.support.v4.app.Fragment;
-import android.support.v4.media.session.MediaControllerCompat;
+//import android.support.v4.media.session.MediaControllerCompat;
 
 
 /**
@@ -12,7 +12,7 @@ import android.support.v4.media.session.MediaControllerCompat;
  */
 public class BaseFragment extends Fragment {
   // so can filter all log msgs belonging to my app
-  private final String APP_TAG = "ABLD.";
+  public static final String APP_TAG = "FSLIB.";
 
   // so can do a search in log msgs for just this class's output
   private final String TAG = APP_TAG + "BaseFragment";
@@ -23,7 +23,7 @@ public class BaseFragment extends Fragment {
     /** Called by child fragments when the next fragment is to be loaded into the view. */
     public void onBookSelected(String demoBookId);
 
-    public MediaControllerCompat getController();
+    //public MediaControllerCompat getController();
   }
 
 
