@@ -28,20 +28,21 @@ import android.widget.ToggleButton;
 import java.io.File;
 
 import io.audioengine.mobile.AudioEngineEvent;
+import io.audioengine.mobile.PlayRequest;
 import io.audioengine.mobile.PlaybackEvent;
-import io.audioengine.mobile.config.LogLevel;
+import io.audioengine.mobile.LogLevel;
 import io.audioengine.mobile.AudioEngine;
 import io.audioengine.mobile.AudioEngineException;
 
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadStatus;
 
-import io.audioengine.mobile.persistence.DeleteRequest;
-import io.audioengine.mobile.persistence.DownloadEngine;
-import io.audioengine.mobile.persistence.DownloadRequest;
-import io.audioengine.mobile.persistence.DownloadType;
+import io.audioengine.mobile.DeleteRequest;
+import io.audioengine.mobile.DownloadEngine;
+import io.audioengine.mobile.DownloadRequest;
+import io.audioengine.mobile.DownloadType;
 
-import io.audioengine.mobile.play.PlaybackEngine;
+import io.audioengine.mobile.PlaybackEngine;
 
 import rx.Observer;
 import rx.Subscription;
@@ -52,7 +53,10 @@ import rx.schedulers.Schedulers;
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
 // talks to the findaway sdk for us
+import org.nypl.findawayclientlibrary.AudioService;
+import org.nypl.findawayclientlibrary.DownloadService;
 import org.nypl.findawayclientlibrary.PlaybackService;
+
 
 
 /**
@@ -144,8 +148,10 @@ import org.nypl.findawayclientlibrary.PlaybackService;
  * currently have an easy-to-check code.  The session expiring could probably be found in the error message.  Since it's a rare event, it'd
  * be OK to resolve all major errors by obtaining a new session key and re-trying the download.
  */
+//public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
+//        View.OnClickListener, View.OnLongClickListener, Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
 public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
-        View.OnClickListener, View.OnLongClickListener, Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
+          View.OnClickListener, View.OnLongClickListener, SeekBar.OnSeekBarChangeListener {
   // so can do a search in log msgs for just this class's output
   private static final String TAG = APP_TAG + "PlayBookActivity";
 
@@ -163,6 +169,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   // plays drm-ed audio
   //private PlaybackEngine playbackEngine;
+  private PlayRequest playRequest;
 
   // follows all download engine events
   private Subscription eventsSubscription;
@@ -176,9 +183,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   String sessionIdReal3 = "a54406b6-76cf-4241-bbf6-7f1e8b76d7f4";
   String sessionIdReal4 = "720ba35d-8920-4621-9749-17f7ebe56316";
   String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
-
-  // fake -- real one with a letter changed
-  String sessionIdFake1 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf61";
+  String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
 
   // Kevin's test value
   // String contentId = "83380";
@@ -189,8 +194,10 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   //String license = "5744a7b7b692b13bf8c06865";
   // Darya's value keyed to licenseId of the book NYPL bought through Bibliotheca
   //String license = "57db1411afde9f3e7a3c041b";
-  String license = "57ff8f27afde9f3cea3c041b";
+  //String license = "57ff8f27afde9f3cea3c041b";
+  String license = "57db1411afde9f3e7a3c041b";
 
+  // TODO: instead of radial gradient, do a gentle square bottom -> top gradient, and make the colors gray-blue.
 
   /*
   {"format":"MP3","items":[{"title":"Track 1","sequence":1,"part":0,"duration":16201},{"title":"Track 2","sequence":2,"part":0,"duration":336070},{"title":"Track 3","sequence":3,"part":0,"duration":247803},{"title":"Track 4","sequence":4,"part":0,"duration":348714},{"title":"Track 5","sequence":5,"part":0,"duration":508844},{"title":"Track 6","sequence":6,"part":0,"duration":323767},{"title":"Track 7","sequence":7,"part":0,"duration":386408},{"title":"Track 8","sequence":8,"part":0,"duration":415953},{"title":"Track 9","sequence":9,"part":0,"duration":275832},{"title":"Track 10","sequence":10,"part":0,"duration":372851},{"title":"Track 11","sequence":11,"part":0,"duration":515793},{"title":"Track 12","sequence":12,"part":0,"duration":289886},{"title":"Track 13","sequence":13,"part":0,"duration":345239},{"title":"Track 14","sequence":14,"part":0,"duration":334111},{"title":"Track 15","sequence":15,"part":0,"duration":356080},{"title":"Track 16","sequence":16,"part":0,"duration":459055},{"title":"Track 17","sequence":17,"part":0,"duration":310993},{"title":"Track 18","sequence":18,"part":0,"duration":294771},{"title":"Track 19","sequence":19,"part":0,"duration":443277},{"title":"Track 20","sequence":20,"part":0,"duration":264286},{"title":"Track 21","sequence":21,"part":0,"duration":348322},{"title":"Track 22","sequence":22,"part":0,"duration":355009},{"title":"Track 23","sequence":23,"part":0,"duration":346441},{"title":"Track 24","sequence":24,"part":0,"duration":220191},{"title":"Track 25","sequence":25,"part":0,"duration":373164},{"title":"Track 26","sequence":26,"part":0,"duration":196394},{"title":"Track 27","sequence":27,"part":0,"duration":399313},{"title":"Track 28","sequence":28,"part":0,"duration":337089},{"title":"Track 29","sequence":29,"part":0,"duration":297069},{"title":"Track 30","sequence":30,"part":0,"duration":240645},{"title":"Track 31","sequence":31,"part":0,"duration":387323},{"title":"Track 32","sequence":32,"part":0,"duration":298036},{"title":"Track 33","sequence":33,"part":0,"duration":367600},{"title":"Track 34","sequence":34,"part":0,"duration":269197},{"title":"Track 35","sequence":35,"part":0,"duration":494189},{"title":"Track 36","sequence":36,"part":0,"duration":393932},{"title":"Track 37","sequence":37,"part":0,"duration":309321},{"title":"Track 38","sequence":38,"part":0,"duration":341321},{"title":"Track 39","sequence":39,"part":0,"duration":415091},{"title":"Track 40","sequence":40,"part":0,"duration":304044},{"title":"Track 41","sequence":41,"part":0,"duration":417076},{"title":"Track 42","sequence":42,"part":0,"duration":368932},{"title":"Track 43","sequence":43,"part":0,"duration":411198},{"title":"Track 44","sequence":44,"part":0,"duration":298271},{"title":"Track 45","sequence":45,"part":0,"duration":300230},{"title":"Track 46","sequence":46,"part":0,"duration":342758},{"title":"Track 47","sequence":47,"part":0,"duration":447848},{"title":"Track 48","sequence":48,"part":0,"duration":527914},{"title":"Track 49","sequence":49,"part":0,"duration":406523},{"title":"Track 50","sequence":50,"part":0,"duration":334398},{"title":"Track 51","sequence":51,"part":0,"duration":307518},{"title":"Track 52","sequence":52,"part":0,"duration":407071},{"title":"Track 53","sequence":53,"part":0,"duration":488390},{"title":"Track 54","sequence":54,"part":0,"duration":432854},{"title":"Track 55","sequence":55,"part":0,"duration":364074},{"title":"Track 56","sequence":56,"part":0,"duration":367130},{"title":"Track 57","sequence":57,"part":0,"duration":329566},{"title":"Track 58","sequence":58,"part":0,"duration":305925},{"title":"Track 59","sequence":59,"part":0,"duration":528070},{"title":"Track 60","sequence":60,"part":0,"duration":416031},{"title":"Track 61","sequence":61,"part":0,"duration":524283},{"title":"Track 62","sequence":62,"part":0,"duration":306683},{"title":"Track 63","sequence":63,"part":0,"duration":297932},{"title":"Track 64","sequence":64,"part":0,"duration":384972},{"title":"Track 65","sequence":65,"part":0,"duration":383639},{"title":"Track 66","sequence":66,"part":0,"duration":441683},{"title":"Track 67","sequence":67,"part":0,"duration":263528},{"title":"Track 68","sequence":68,"part":0,"duration":412478},{"title":"Track 69","sequence":69,"part":0,"duration":252792},{"title":"Track 70","sequence":70,"part":0,"duration":324080},{"title":"Track 71","sequence":71,"part":0,"duration":361487},{"title":"Track 72","sequence":72,"part":0,"duration":403910},{"title":"Track 73","sequence":73,"part":0,"duration":510594},{"title":"Track 74","sequence":74,"part":0,"duration":535594},{"title":"Track 75","sequence":75,"part":0,"duration":472769},{"title":"Track 76","sequence":76,"part":0,"duration":284008},{"title":"Track 77","sequence":77,"part":0,"duration":419114},{"title":"Track 78","sequence":78,"part":0,"duration":417990},{"title":"Track 79","sequence":79,"part":0,"duration":32318}],
@@ -213,7 +220,9 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   ActionBarDrawerToggle actionBarDrawerToggle;
   NavigationView tocNavigationView;
 
-  PlaybackService playbackService = new PlaybackService(APP_TAG, sessionIdReal1);
+  private AudioService audioService = new AudioService(APP_TAG, sessionIdReal1);
+  private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService);
+  private DownloadService downloadService = new DownloadService(APP_TAG, audioService);
 
 
 
@@ -322,10 +331,10 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
     // one-time call to start up the AudioEngine service
-    playbackService.initAudioEngine(this);
+    audioService.initAudioEngine(this);
 
     // ask the AudioEngine to start a DownloadEngine
-    playbackService.initDownloadEngine();
+    downloadService.initDownloadEngine();
 
     // ask the AudioEngine to start a PlaybackEngine
     playbackService.initPlaybackEngine();
@@ -365,12 +374,16 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   protected void onResume() {
     super.onResume();
 
+
     // a stream of _all_ download events for the supplied content id
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
-    eventsSubscription = playbackService.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
+    // TODO: fix to call download service instead of this
+    //eventsSubscription = downloadService.subscribeDownloadEventsAll(this, contentId);
 
+    //TODO downloadService.subscribeDownloadEventsStatusChanges();
     // a stream of just download status changes for the supplied content id
-    playbackService.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<DownloadStatus>() {
+    downloadService.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
+            .take(1).subscribe(new Observer<DownloadStatus>() {
 
       @Override
       public void onCompleted() {
@@ -411,7 +424,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     }); //downloadEngine.status.subscribe
 
 
-    playbackService.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
+    downloadService.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
 
       @Override
       public void onCompleted() {
@@ -436,8 +449,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
       }
     }); //downloadEngine.progress.subscribe
 
-
-    eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
+    // TODO: bring back, referencing download service instead of this
+    //eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
   }
 
 
@@ -581,7 +594,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     try {
       // Audio files are downloaded and stored under the application's standard internal files directory. This directory is deleted when the application is removed.
       LogHelper.e(TAG, "before downloadEngine.download \n\n\n");
-      playbackService.getDownloadEngine().download(downloadRequest);
+      downloadService.getDownloadEngine().download(downloadRequest);
       LogHelper.e(TAG, "after downloadEngine.download \n\n\n");
     } catch (Exception e) {
       LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
@@ -663,7 +676,11 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
       try {
         // NOTE: Can specify the chapter to start playing at here.
-        playbackService.getPlaybackEngine().play(license, contentId, part, chapter, (int) playbackService.getLastPlaybackPosition());
+        //playbackService.getPlaybackEngine().play(license, contentId, part, chapter, (int) playbackService.getLastPlaybackPosition());
+
+        playRequest = PlayRequest.builder().contentId(contentId).part(part).chapter(chapter).license(license).position((int) playbackService.getLastPlaybackPosition()).build();
+        playbackService.getPlaybackEngine().play(playRequest);
+
       } catch (Exception e) {
         e.printStackTrace();
         LogHelper.e(TAG, e, "play call generated a problem");
@@ -737,36 +754,6 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   @Override
-  public void onCompleted() {
-    // ignore
-  }
-
-
-  @Override
-  public void onError(Throwable e) {
-    LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
-    e.printStackTrace();
-    // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
-    /*
-11.324 5192-5192/org.nypl.findawaysdkdemo W/System.err: rx.exceptions.MissingBackpressureException
-11-17 22:18:11.329 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.onNext(OperatorObserveOn.java:160)
-11-17 22:18:11.334 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.onNext(OperatorSubscribeOn.java:53)
-11-17 22:18:11.338 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.RelaySubscriptionManager$RelayObserver.onNext(RelaySubscriptionManager.java:205)
-11-17 22:18:11.342 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.PublishRelay.call(PublishRelay.java:47)
-11-17 22:18:11.346 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedAction1.call(SerializedAction1.java:84)
-11-17 22:18:11.350 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedRelay.call(SerializedRelay.java:20)
-11-17 22:18:11.354 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.PlayerEventBus.send(PlayerEventBus.java:33)
-11-17 22:18:11.358 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.FindawayMediaPlayer.onPlayerStateChanged(FindawayMediaPlayer.java:373)
-11-17 22:18:11.363 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl.handleEvent(ExoPlayerImpl.java:206)
-11-17 22:18:11.368 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl$1.handleMessage(ExoPlayerImpl.java:65)
-11-17 22:18:11.371 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Handler.dispatchMessage(Handler.java:102)
-11-17 22:18:11.375 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Looper.loop(Looper.java:154)
-11-17 22:18:11.379 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.HandlerThread.run(HandlerThread.java:61)
-     */
-  }
-
-
-  @Override
   public boolean onLongClick(View view) {
     /* TODO
     if (view.getId() == R.id.download_button) {
@@ -789,8 +776,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
    * Catches AudioEngineEvent events and redirects processing to either the download or playback event-handling methods.
    *
    * Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-   * @param engineEvent
-   */
+   //* @param engineEvent
+   * /
   @Override
   public void onNext(AudioEngineEvent engineEvent) {
     if (engineEvent instanceof DownloadEvent) {
@@ -801,183 +788,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
       }
     }
   }
+  */
 
-
-  /**
-   * Catches DownloadEngine events.
-   *
-   * Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-   * @param downloadEvent
-   */
-  public void onNext(DownloadEvent downloadEvent) {
-    File filesDir = getFilesDir();
-    if (filesDir.exists()) {
-      LogHelper.d(TAG, "filesDir.getAbsolutePath=" + filesDir.getAbsolutePath());
-      String[] filesList = filesDir.list();
-      LogHelper.d(TAG, "filesDir.filesList=" + filesList.length);
-    }
-
-    String sharedPrefsPath = "shared_prefs/";
-    File sharedPrefsDir = new File(getFilesDir(), "../" + sharedPrefsPath);
-    if (sharedPrefsDir.exists()) {
-      LogHelper.d(TAG, "sharedPrefsDir.getAbsolutePath=" + sharedPrefsDir.getAbsolutePath());
-      String[] filesList = sharedPrefsDir.list();
-      LogHelper.d(TAG, "sharedPrefsDir.filesList=" + filesList.length);
-    }
-
-    if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-      File externalFilesDir = getExternalFilesDir(null);
-      if (externalFilesDir.exists()) {
-        LogHelper.d(TAG, "externalFilesDir.getAbsolutePath=" + externalFilesDir.getAbsolutePath());
-        String[] externalFilesList = externalFilesDir.list();
-        LogHelper.d(TAG, "externalFilesDir.externalFilesList=" + externalFilesList.length);
-      }
-    }
-
-
-    LogHelper.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter);
-    LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage);
-    LogHelper.d(TAG, "downloadEvent.content=" + downloadEvent.content);
-    LogHelper.d(TAG, "downloadEvent.content_download_percentage=" + downloadEvent.contentPercentage);
-    LogHelper.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
-
-    if (downloadEvent.isError()) {
-
-      // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-      // don't think it's related to the download error.
-
-      // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-      // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-      // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-      // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-      // and also the chapter object is all nulled when onNext isError.
-      // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-      // that's thrown from the findaway internal sdk code:
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-      // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-      // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-      // and some nicer stack trace, coming from the findaway sdk:
-      // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      Toast.makeText(this, "Download error occurred: " + downloadEvent.getMessage(), Toast.LENGTH_LONG).show();
-
-      LogHelper.e(TAG, "downloadEvent.getMessage=" + downloadEvent.getMessage());
-      LogHelper.e(TAG, "downloadEvent.getCause=", downloadEvent.getCause());
-      LogHelper.e(TAG, "downloadEvent.code=" + downloadEvent.code);
-
-
-      LogHelper.e(TAG, "downloadEvent.getStackTrace:");
-      StackTraceElement[] elements = Thread.currentThread().getStackTrace();
-      for (int i = 0; i < elements.length; i++) {
-        LogHelper.e("Test", String.format("stack element[%d]: %s", i, elements[i]));
-      }
-
-      // NOTE:  The error sending is being re-worked by Findaway, and might change.  Here's the
-      // description of how it currently works:
-      // "Currently, if the license you supply is not found you'll get a AUDIO_NOT_FOUND.
-      // If the license is found but not valid for the requested content you'll get an HTTP_ERROR.
-      // If the license does not match the checkout you'll get a FORBIDDEN.
-      // If the license is valid but not actually checked out you'll get a HTTP_ERROR
-      // Lastly, HTTP_ERROR is currently the catch all. So, 500's on our end will result in that error code as well."
-      // All codes listed here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-      if (DownloadEvent.HTTP_ERROR.equals(downloadEvent.code)) {
-        // decide if want to re-try downloading or throw a "sorry" message to user.
-        LogHelper.e(TAG, "DownloadEvent.HTTP_ERROR");
-      } else if (DownloadEvent.FORBIDDEN.equals(downloadEvent.code)) {
-        LogHelper.e(TAG, "DownloadEvent.FORBIDDEN");
-      } else if (DownloadEvent.ERROR_DOWNLOADING_FILE.equals(downloadEvent.code)) {
-        LogHelper.e(TAG, "DownloadEvent.ERROR_DOWNLOADING_FILE");
-        // TODO: one possibility is downloadEvent.getMessage() == "write failed: ENOSPC (No space left on device)",
-        // which would be hard to catch based on a string message, but common enough to need handling.
-
-      }
-
-    } else {
-      if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_STARTED)) {
-
-        Toast.makeText(this, getString(R.string.downloadStarted), Toast.LENGTH_SHORT).show();
-
-        if (playBookFragment != null) {
-          // NOTE: changes the downloadButton.getText() to return "Pause"
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.pause));
-        }
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_PAUSED)) {
-
-        Toast.makeText(this, getString(R.string.downloadPaused), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.resume));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
-
-        Toast.makeText(this, getString(R.string.downloadCancelled), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.chapterDownloaded, downloadEvent.chapter.friendlyName()), Toast.LENGTH_SHORT).show();
-
-      } else if (downloadEvent.code.equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.downloadComplete), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.delete));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DELETE_COMPLETE)) {
-
-        Toast.makeText(this, getString(R.string.deleteComplete), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
-
-        setProgress(downloadEvent);
-
-      } else {
-
-        LogHelper.w(TAG, "Unknown download event: " + downloadEvent.code);
-      }
-    }
-  }// onNext(DownloadEvent)
-
-
-  /**
-   *
-   * @param playbackEvent
-   */
-  public void onNext(PlaybackEvent playbackEvent) {
-
-    if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_PROGRESS_UPDATE)) {
-      if (playBookFragment != null) {
-        playBookFragment.redrawPlaybackPosition(playbackEvent);
-      }
-
-      playbackService.setLastPlaybackPosition(playbackEvent.position);
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_STARTED)) {
-
-      Toast.makeText(this, "Playback started.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_PAUSED)) {
-
-      Toast.makeText(this, "Playback paused.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_STOPPED)) {
-
-      Toast.makeText(this, "Playback stopped.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.CHAPTER_PLAYBACK_COMPLETED)) {
-      // NOTE:  "Do X to end of chapter" functionality can go here.
-      Toast.makeText(this, "Chapter completed.", Toast.LENGTH_SHORT).show();
-    }
-  }
 
 
   public void onPlaybackComplete() {
@@ -1022,10 +834,13 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     //if (seekBar.getId() == this.seekBar.getId()) {
 
     playbackService.getPlaybackEngine().seekTo(playbackService.getSeekTo());
-      eventsSubscription = playbackService.getPlaybackEngine().events()
-              .subscribeOn(Schedulers.io())
-              .observeOn(AndroidSchedulers.mainThread())
-              .subscribe(this);
+
+    // TODO: fix to call playback service instead of this
+    //eventsSubscription = playbackService.getPlaybackEngine().events()
+    //        .subscribeOn(Schedulers.io())
+    //        .observeOn(AndroidSchedulers.mainThread())
+    //        .subscribe(this);
+
     //}
   }
 
@@ -1083,9 +898,10 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
    * Wrapper around getSupportMediaController(), so we can call it from a child fragment.
    * @return  MediaControllerCompat that provides media control onscreen buttons.
    */
-  public MediaControllerCompat getController() {
-    return getSupportMediaController();
-  }
+  //public MediaControllerCompat getController() {
+  //  return getSupportMediaController();
+  //  return ((MediaControllerCompat) MediaControllerCompat.getMediaController());
+  //}
 
 
   /* ------------------------------------ /UTILITY METHODS ------------------------------------- */

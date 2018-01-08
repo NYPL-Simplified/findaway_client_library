@@ -20,6 +20,7 @@ import android.widget.ToggleButton;
 import com.bugsnag.android.BreadcrumbType;
 import com.bugsnag.android.Bugsnag;
 
+import org.nypl.findawayclientlibrary.util.DateTimeUtil;
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.util.HashMap;
 
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.PlaybackEvent;
-import io.audioengine.mobile.util.StringUtils;
+//import io.audioengine.mobile.StringUtils;
 
 
 /**
@@ -212,11 +213,14 @@ public class PlayBookFragment extends BaseFragment {
    */
   public void redrawPlaybackPosition(PlaybackEvent playbackEvent) {
 
-    playbackSeekBar.setMax((int) playbackEvent.duration);
-    playbackSeekBar.setProgress((int) playbackEvent.position);
+    // TODO: intValue may overflow, and 0 may not be best default value.  fix to handle.
+    int max = playbackEvent.duration() != null ? playbackEvent.duration().intValue() : 0;
+    int progress = playbackEvent.position() != null ? playbackEvent.position().intValue() : 0;
+    playbackSeekBar.setMax(max);
+    playbackSeekBar.setProgress(progress);
 
-    currentTime.setText(StringUtils.getTimeString(playbackEvent.position));
-    remainingTime.setText(StringUtils.getTimeString(playbackEvent.duration - playbackEvent.position));
+    currentTime.setText(DateTimeUtil.millisToHumanReadable(playbackEvent.position()));
+    remainingTime.setText(DateTimeUtil.millisToHumanReadable(playbackEvent.duration() - playbackEvent.position()));
   }
 
 
@@ -230,7 +234,7 @@ public class PlayBookFragment extends BaseFragment {
   public void redrawPlaybackPosition(SeekBar seekBar, int progress, boolean fromUser) {
     if (fromUser) {
       if (seekBar.getId() == this.playbackSeekBar.getId()) {
-        currentTime.setText(StringUtils.getTimeString(progress));
+        currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
       }
     }
   }
@@ -240,7 +244,7 @@ public class PlayBookFragment extends BaseFragment {
    * Update the progress bar to reflect where we are in the downloading.
    */
   public void redrawDownloadProgress(DownloadEvent downloadEvent) {
-    this.redrawDownloadProgress(downloadEvent.contentPercentage, downloadEvent.chapterPercentage);
+    this.redrawDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage());
   }
 
 
