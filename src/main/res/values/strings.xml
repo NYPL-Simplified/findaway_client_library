@@ -50,4 +50,5 @@
     <string name="skip_to_prev_chapter_button">rewind to previous chapter button</string>
 
     <string name="title_activity_playbook">Play Audio Book</string>
+    <string name="deleteAllContentComplete">All content deleted for this book.</string>
 </resources>

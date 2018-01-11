@@ -1,14 +1,20 @@
 package org.nypl.findawayclientlibrary;
 
-import io.audioengine.mobile.DownloadEvent;
+import java.io.File;
+
+import android.content.Context;
+import android.os.Environment;
+import android.widget.Toast;
+
+import io.audioengine.mobile.DownloadStatus;
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 import io.audioengine.mobile.AudioEngineException;
-
 import io.audioengine.mobile.DownloadEngine;
+import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
 
 import org.nypl.findawayclientlibrary.util.LogHelper;
@@ -27,17 +33,28 @@ public class DownloadService implements Observer<DownloadEvent> {
   // so can do a search in log msgs for just this class's output
   private static String TAG;
 
+  public static final Integer DOWNLOAD_ERROR = new Integer(-1);
+  public static final Integer DOWNLOAD_SUCCESS = new Integer(0);
+  public static final Integer DOWNLOAD_RUNNING = new Integer(1);
+  public static final Integer DOWNLOAD_PAUSED = new Integer(2);
+  public static final Integer DOWNLOAD_STOPPED = new Integer(3);
+
   private AudioService audioService;
+
+  // Provides context for methods s.a. getFilesDir(), and allows events caught
+  // by this class to be reflected in the app's UI.
+  private PlayBookActivity callbackActivity = null;
 
   // fulfills books
   DownloadEngine downloadEngine = null;
   //private DownloadRequest downloadRequest;
 
 
-  public DownloadService(String APP_TAG, AudioService audioService) {
+  public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "DownloadService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
+    this.callbackActivity = callbackActivity;
   }
 
 
@@ -76,10 +93,58 @@ public class DownloadService implements Observer<DownloadEvent> {
    * Subscribe to a stream of _all_ download events for the supplied content id.
    * @return
    */
-  public Subscription subscribeDownloadEventsAll(Observer observer, String contentId) {
+  public Subscription subscribeDownloadEventsAll(Observer<DownloadEvent> observer, String contentId) {
     Subscription eventsSubscription = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
     return eventsSubscription;
   }
+
+
+  /**
+   * Subscribe to a stream of download events that reflect the progress of an ongoing download request.
+   * @return
+   */
+  public Subscription subscribeDownloadEventsProgress(Observer<Integer> observer, String contentId) {
+    Subscription eventsSubscription = null;
+
+    // if we were given an outside observer to let listen to download progress
+    if (observer != null) {
+      eventsSubscription = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+      return eventsSubscription;
+    }
+
+    // make our own observer
+    this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
+      @Override
+      public void onCompleted() {
+        LogHelper.d(TAG, "Initial download progress complete.");
+      }
+
+      @Override
+      public void onError(Throwable e) {
+        LogHelper.d(TAG, "Initial download progress error: ", e.getMessage());
+      }
+
+      @Override
+      public void onNext(Integer progress) {
+        LogHelper.d(TAG, "Got initial download progress ", progress);
+
+        callbackActivity.setDownloadProgress(progress, 0, null);
+      }
+    }); //downloadEngine.progress.subscribe
+
+    return eventsSubscription;
+  }
+
+
+  /**
+   * Subscribe to a stream of just download status changes for the supplied content id.
+   * @return
+   */
+  public Subscription subscribeDownloadEventsStatusChanges(Observer<DownloadStatus> observer, String contentId) {
+    Subscription eventsSubscription = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    return eventsSubscription;
+  }
+
 
 
   /* ------------------------------------ DOWNLOAD EVENT HANDLERS ------------------------------------- */
@@ -121,31 +186,32 @@ public class DownloadService implements Observer<DownloadEvent> {
    */
   @Override
   public void onNext(DownloadEvent downloadEvent) {
-    /* TODO: bring back:
-    File filesDir = getFilesDir();
-    if (filesDir.exists()) {
-      LogHelper.d(TAG, "filesDir.getAbsolutePath=" + filesDir.getAbsolutePath());
-      String[] filesList = filesDir.list();
-      LogHelper.d(TAG, "filesDir.filesList=" + filesList.length);
-    }
+    // TODO: this directory-checking code is for debugging, and should not go live
+    if (callbackActivity != null) {
+      File filesDir = callbackActivity.getFilesDir();
+      if (filesDir.exists()) {
+        LogHelper.d(TAG, "filesDir.getAbsolutePath=" + filesDir.getAbsolutePath());
+        String[] filesList = filesDir.list();
+        LogHelper.d(TAG, "filesDir.filesList=" + filesList.length);
+      }
 
-    String sharedPrefsPath = "shared_prefs/";
-    File sharedPrefsDir = new File(getFilesDir(), "../" + sharedPrefsPath);
-    if (sharedPrefsDir.exists()) {
-      LogHelper.d(TAG, "sharedPrefsDir.getAbsolutePath=" + sharedPrefsDir.getAbsolutePath());
-      String[] filesList = sharedPrefsDir.list();
-      LogHelper.d(TAG, "sharedPrefsDir.filesList=" + filesList.length);
-    }
+      String sharedPrefsPath = "shared_prefs/";
+      File sharedPrefsDir = new File(callbackActivity.getFilesDir(), "../" + sharedPrefsPath);
+      if (sharedPrefsDir.exists()) {
+        LogHelper.d(TAG, "sharedPrefsDir.getAbsolutePath=" + sharedPrefsDir.getAbsolutePath());
+        String[] filesList = sharedPrefsDir.list();
+        LogHelper.d(TAG, "sharedPrefsDir.filesList=" + filesList.length);
+      }
 
-    if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-      File externalFilesDir = getExternalFilesDir(null);
-      if (externalFilesDir.exists()) {
-        LogHelper.d(TAG, "externalFilesDir.getAbsolutePath=" + externalFilesDir.getAbsolutePath());
-        String[] externalFilesList = externalFilesDir.list();
-        LogHelper.d(TAG, "externalFilesDir.externalFilesList=" + externalFilesList.length);
+      if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+        File externalFilesDir = callbackActivity.getExternalFilesDir(null);
+        if (externalFilesDir.exists()) {
+          LogHelper.d(TAG, "externalFilesDir.getAbsolutePath=" + externalFilesDir.getAbsolutePath());
+          String[] externalFilesList = externalFilesDir.list();
+          LogHelper.d(TAG, "externalFilesDir.externalFilesList=" + externalFilesList.length);
+        }
       }
     }
-    */
 
     LogHelper.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter());
     LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage());
@@ -153,41 +219,10 @@ public class DownloadService implements Observer<DownloadEvent> {
     LogHelper.d(TAG, "downloadEvent.content_download_percentage=" + downloadEvent.contentPercentage());
     LogHelper.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
 
+
     if (downloadEvent.isError()) {
-
-      // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-      // don't think it's related to the download error.
-
-      // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-      // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-      // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-      // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-      // and also the chapter object is all nulled when onNext isError.
-      // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-      // that's thrown from the findaway internal sdk code:
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-      // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-      // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-      // and some nicer stack trace, coming from the findaway sdk:
-      // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      /*
-      01-05 17:50:16.844 9665-9711/org.nypl.audiobooklibrarydemoapp I/System.out: Sending PlayNextRequest to onNext. Observers? true
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/102244/playlists http/1.1
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Type: application/json; charset=UTF-8
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Length: 41
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> END POST
-      01-05 17:50:16.884 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.896 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.971 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- 200 OK https://api.findawayworld.com/v4/audiobooks/102244/playlists (123ms)
-       */
-
-      // TODO: bring back: Toast.makeText(this, "Download error occurred: " + downloadEvent.message(), Toast.LENGTH_LONG).show();
+      // TODO: in future branch, handle errors, don't just output to log and screen and forget
+      callbackActivity.notifyDownloadEvent("Download error occurred: " + downloadEvent.message());
 
       LogHelper.e(TAG, "downloadEvent.getMessage=" + downloadEvent.message());
       //LogHelper.e(TAG, "downloadEvent.getCause=", downloadEvent.getCause());
@@ -218,64 +253,91 @@ public class DownloadService implements Observer<DownloadEvent> {
         // TODO: one possibility is downloadEvent.getMessage() == "write failed: ENOSPC (No space left on device)",
         // which would be hard to catch based on a string message, but common enough to need handling.
 
+      } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADED.equals(downloadEvent.code())) {
+        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
+      } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADING.equals(downloadEvent.code())) {
+        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
       }
 
     } else {
-      /*
+      // download event is not an error, whee
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
+        // TODO: make sure all string messages are coming in from R.string
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_RUNNING);
 
-        Toast.makeText(this, getString(R.string.downloadStarted), Toast.LENGTH_SHORT).show();
-
-        if (playBookFragment != null) {
-          // NOTE: changes the downloadButton.getText() to return "Pause"
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.pause));
-        }
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
-
-        Toast.makeText(this, getString(R.string.downloadPaused), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.resume));
-        }
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadPaused));
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_PAUSED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
 
-        Toast.makeText(this, getString(R.string.downloadCancelled), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
+        callbackActivity.resetDownloadProgress();
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()), Toast.LENGTH_SHORT).show();
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.downloadComplete), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.delete));
-        }
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
+        callbackActivity.resetDownloadProgress();
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
-        Toast.makeText(this, getString(R.string.deleteComplete), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
+      } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
+        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
+        callbackActivity.resetDownloadProgress();
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
-
-        setProgress(downloadEvent);
+        callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
 
       } else {
-
         LogHelper.w(TAG, "Unknown download event: " + downloadEvent.code());
       }
-      */
+
     }
   }// onNext(DownloadEvent)
 
   /* ------------------------------------ /DOWNLOAD EVENT HANDLERS ------------------------------------- */
 
-}
+
+
+    // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
+    // don't think it's related to the download error.
+
+    // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
+    // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
+    // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
+    // http://developer.audioengine.io/sdk/android/v7/download-engine ).
+    // and also the chapter object is all nulled when onNext isError.
+    // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
+    // that's thrown from the findaway internal sdk code:
+    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
+    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
+    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
+    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
+    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
+    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
+    // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
+    // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
+    // and some nicer stack trace, coming from the findaway sdk:
+    // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
+
+      /*
+      01-05 17:50:16.844 9665-9711/org.nypl.audiobooklibrarydemoapp I/System.out: Sending PlayNextRequest to onNext. Observers? true
+      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/102244/playlists http/1.1
+      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Type: application/json; charset=UTF-8
+      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Length: 41
+      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> END POST
+      01-05 17:50:16.884 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
+      01-05 17:50:16.896 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
+      01-05 17:50:16.971 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- 200 OK https://api.findawayworld.com/v4/audiobooks/102244/playlists (123ms)
+       */
+
+
+  }

@@ -3,12 +3,10 @@ package org.nypl.findawayclientlibrary;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Environment;
 
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 
-import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -20,43 +18,27 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import android.widget.Button;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import java.io.File;
-
-import io.audioengine.mobile.AudioEngineEvent;
 import io.audioengine.mobile.PlayRequest;
-import io.audioengine.mobile.PlaybackEvent;
-import io.audioengine.mobile.LogLevel;
-import io.audioengine.mobile.AudioEngine;
-import io.audioengine.mobile.AudioEngineException;
 
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadStatus;
 
-import io.audioengine.mobile.DeleteRequest;
-import io.audioengine.mobile.DownloadEngine;
 import io.audioengine.mobile.DownloadRequest;
 import io.audioengine.mobile.DownloadType;
-
-import io.audioengine.mobile.PlaybackEngine;
 
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-// TODO: don't have LogHelper in both libraries
+// TODO: infuture branch, separate LogHelper out so can call on it from both findaway and rbdigital libraries
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
 // talks to the findaway sdk for us
-import org.nypl.findawayclientlibrary.AudioService;
-import org.nypl.findawayclientlibrary.DownloadService;
-import org.nypl.findawayclientlibrary.PlaybackService;
-
 
 
 /**
@@ -221,8 +203,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   NavigationView tocNavigationView;
 
   private AudioService audioService = new AudioService(APP_TAG, sessionIdReal1);
-  private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService);
-  private DownloadService downloadService = new DownloadService(APP_TAG, audioService);
+  private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService, this);
+  private DownloadService downloadService = new DownloadService(APP_TAG, audioService, this);
 
 
 
@@ -360,7 +342,10 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   protected void onPause() {
     super.onPause();
 
-    if (!eventsSubscription.isUnsubscribed()) {
+    // TODO:  got a null pointer exception when clicking back twice from screen
+    // get all the code separated and returned, and if still having null here,
+    // find out why.
+    if (eventsSubscription != null && !eventsSubscription.isUnsubscribed()) {
       eventsSubscription.unsubscribe();
     }
   }
@@ -377,77 +362,9 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
     // a stream of _all_ download events for the supplied content id
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
-    // TODO: fix to call download service instead of this
-    //eventsSubscription = downloadService.subscribeDownloadEventsAll(this, contentId);
+    eventsSubscription = downloadService.subscribeDownloadEventsAll(downloadService, contentId);
 
-    //TODO downloadService.subscribeDownloadEventsStatusChanges();
-    // a stream of just download status changes for the supplied content id
-    downloadService.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
-            .take(1).subscribe(new Observer<DownloadStatus>() {
-
-      @Override
-      public void onCompleted() {
-
-      }
-
-      @Override
-      public void onError(Throwable e) {
-
-      }
-
-      @Override
-      public void onNext(DownloadStatus downloadStatus) {
-        if (downloadStatus == DownloadStatus.DOWNLOADED) {
-          if (playBookFragment != null) {
-            playBookFragment.redrawDownloadButton(getResources().getString(R.string.delete));
-          } else {
-            Toast.makeText(getApplicationContext(), R.string.delete, Toast.LENGTH_LONG).show();
-          }
-        } else {
-          if (downloadStatus == DownloadStatus.QUEUED || downloadStatus == DownloadStatus.DOWNLOADING) {
-            if (playBookFragment != null) {
-              playBookFragment.redrawDownloadButton(getResources().getString(R.string.pause));
-            } else {
-              Toast.makeText(getApplicationContext(), R.string.pause, Toast.LENGTH_LONG).show();
-            }
-          } else {
-            if (downloadStatus == DownloadStatus.PAUSED || downloadStatus == DownloadStatus.NOT_DOWNLOADED) {
-              if (playBookFragment != null) {
-                playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-              } else {
-                Toast.makeText(getApplicationContext(), R.string.download, Toast.LENGTH_LONG).show();
-              }
-            }
-          }
-        }
-      }
-    }); //downloadEngine.status.subscribe
-
-
-    downloadService.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
-
-      @Override
-      public void onCompleted() {
-
-        LogHelper.d(TAG, "Initial progress complete.");
-      }
-
-      @Override
-      public void onError(Throwable e) {
-
-        LogHelper.d(TAG, "Initial progress error: " + e.getMessage());
-      }
-
-      @Override
-      public void onNext(Integer progress) {
-
-        LogHelper.d(TAG, "Got initial progress " + progress);
-
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadProgress(progress, 0);
-        }
-      }
-    }); //downloadEngine.progress.subscribe
+    //downloadProgressSubscription = downloadService.subscribeDownloadEventsProgress(null, contentId);
 
     // TODO: bring back, referencing download service instead of this
     //eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
@@ -519,6 +436,88 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   /* ------------------------------------ NAVIGATION EVENT HANDLERS ------------------------------------- */
 
   /**
+   * Highlight the chapter being played in the TOC, and scroll the TOC to show that chapter
+   * towards the center of the screen.
+   */
+  public void drawChosenTableOfContentsMenuItem() {
+    // see https://stackoverflow.com/questions/31233279/navigation-drawer-how-do-i-set-the-selected-item-at-startup?rq=1
+
+  }
+
+
+  /**
+   * For now:  Hardcoded method for demo purposes that fills the right nav toc menu with
+   * chapter information.
+   * Later:  Will accept a list of chapters and could be called when the book's metadata changes.
+   */
+  public void loadTableOfContentsMenu() {
+
+    final Menu menu = tocNavigationView.getMenu();
+
+    int groupId = R.id.group_chapter_menu;
+    for (int menuItemId = 10; menuItemId <= 13; menuItemId++) {
+      int order = menuItemId;
+      MenuItem menuItem = menu.add(groupId, menuItemId, order, "Chapter " + menuItemId);
+      menuItem.setIcon(R.drawable.ic_radio_button_unchecked_black_24dp);
+      menuItem.setCheckable(true);
+    }
+
+    // code from SO to update the nav menu through its adapter.  I don't think it should be necessary, but testing here:
+    for (int i = 0, count = tocNavigationView.getChildCount(); i < count; i++) {
+      final View child = tocNavigationView.getChildAt(i);
+      if (child != null && child instanceof ListView) {
+        final ListView menuView = (ListView) child;
+        //final HeaderViewListAdapter adapter = (HeaderViewListAdapter) menuView.getAdapter();
+        //final BaseAdapter wrapped = (BaseAdapter) adapter.getWrappedAdapter();
+        //wrapped.notifyDataSetChanged();
+      }
+    }
+  }
+
+
+  /**
+   * Find out if the table of contents is open.  If it is, then close it.
+   * Else, the user must really mean to go back to a previous fragment,
+   * or maybe to leave the activity altogether for a previous screen.
+   * Do that for them.
+   */
+  @Override
+  public void onBackPressed() {
+    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+      drawerLayout.closeDrawer(GravityCompat.END);
+    } else {
+      super.onBackPressed();
+    }
+
+  }
+
+
+  /**
+   * Fill up and inflate the top navigation bar.
+   * If we have a book to load, then also load its table of contents menu.
+   *
+   * NOTE:  It is not permitted to add menu items in the Activity an then add more items in the child Fragment.
+   * If creating menu from inside multiple fragments' onCreateOptionsMenu(), then make sure to call menu.clear()
+   * at the beginning of each fragment's onCreateOptionsMenu().
+   * If changing menu items, based on context, use onPrepareOptionsMenu(), which is called every time user clicks on the menu bar.
+   *
+   * @param menu
+   * @return
+   */
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    // Inflate the menu; this adds items to the action bar if it is present.
+    getMenuInflater().inflate(R.menu.action_toolbar, menu);
+
+    // dynamically populate the TOC with either the hard-coded test data or the book metadata.
+    // can also be called from other parts of the code, s.a. when the user selects a new book.
+    loadTableOfContentsMenu();
+
+    return super.onCreateOptionsMenu(menu);
+  }
+
+
+  /**
    * A chapter got clicked in the table of contents menu.  Play that chapter,
    * and visibly mark it as selected in the menu.
    *
@@ -559,6 +558,48 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
     drawerLayout.closeDrawer(GravityCompat.END);
     return true;
+  }
+
+
+  /**
+   * Called by OS when the user selects one of the top nav app bar items.
+   *
+   * @param item  Indicates which item was clicked.  item.getItemId() corresponds to <item> element's android:id attribute.
+   * @return
+   */
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    // Handle action bar item clicks here. The action bar will
+    // automatically handle clicks on the Home/Up button, so long
+    // as you specify a parent activity in AndroidManifest.xml.
+    int id = item.getItemId();
+
+    // User chose the "Settings" item, show the app settings UI...
+    if (id == R.id.action_sleep_timer) {
+      return true;
+    }
+
+    // If we were running everything on one codebase, then the standard way to handle the "up" action
+    // would be to not call for it here, but to let the super.onOptionsItemSelected() handle it.  Because we're running
+    // from a library project, we would not be able to specify a calling project's activity as PlayBookActivity's
+    // parent activity in the manifest.  So we must handle the call to return to parent in the java code ourselves.
+    if (id == android.R.id.home) {
+      LogHelper.d(TAG, "action bar clicked");
+      // TODO: finish(); return true; would stop the activity and go up a level to the calling activity.
+    }
+
+
+    if (id == R.id.action_table_of_contents) {
+      if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+        drawerLayout.closeDrawer(GravityCompat.END);
+      } else {
+        drawerLayout.openDrawer(GravityCompat.END);
+      }
+      return true;
+    }
+
+    // If we got here, the user's action was not recognized.  Invoke the superclass to handle it.
+    return super.onOptionsItemSelected(item);
   }
 
 
@@ -865,17 +906,67 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   /* ------------------------------------ UI METHODS ------------------------------------- */
 
-    private void setProgress(DownloadEvent downloadEvent) {
-      if (playBookFragment != null) {
-        playBookFragment.redrawDownloadProgress(downloadEvent);
-      }
+  /**
+   * Display or log notifications related to download events.
+   * Limit to only displaying when situation warrants, s.a. during development.
+   * @param message
+   */
+  public void notifyDownloadEvent(String message) {
+    // have more toast notifications when developing than on prod
+    if (LogHelper.getVerbosity() == LogHelper.DEV) {
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+  }
 
-    private void resetProgress() {
-      if (playBookFragment != null) {
-        playBookFragment.resetProgress();
-      }
+
+  /**
+   * Display or log notifications related to playback events.
+   * Limit to only displaying when situation warrants, s.a. during development.
+   * @param message
+   */
+  public void notifyPlayEvent(String message) {
+    // have more toast notifications when developing than on prod
+    if (LogHelper.getVerbosity() == LogHelper.DEV) {
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+  }
+
+
+  /**
+   * Update the download progress bar, and any other download-associated UI elements
+   * to reflect current download status (passed in).
+   *
+   * @param primaryProgress
+   * @param secondaryProgress
+   */
+  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, Integer status) {
+    if (playBookFragment != null) {
+      playBookFragment.redrawDownloadProgress(primaryProgress, secondaryProgress);
+
+      // change the download button's icon and text
+      playBookFragment.redrawDownloadButton(status);
+    }
+  }
+
+
+  /**
+   *
+   */
+  public void resetDownloadProgress() {
+    if (playBookFragment != null) {
+      playBookFragment.resetDownloadProgress();
+    }
+  }
+
+
+  /**
+   * Ask the fragment to update the seek bar.
+   */
+  public void setPlayProgress(Long duration, Long position) {
+    if (playBookFragment != null) {
+      playBookFragment.redrawPlaybackPosition(duration, position);
+    }
+  }
 
 
   /* ------------------------------------ /UI METHODS ------------------------------------- */

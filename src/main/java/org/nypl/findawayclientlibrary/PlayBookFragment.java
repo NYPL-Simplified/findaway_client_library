@@ -186,8 +186,30 @@ public class PlayBookFragment extends BaseFragment {
   /**
    * Change the message on the download button, letting the user know where we are in the downloading progress.
    */
-  public void redrawDownloadButton(String newText) {
-    //downloadButton.setText(newText);
+  public void redrawDownloadButton(Integer status) {
+    if (status == null) {
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_RUNNING)) {
+      downloadButton.setText(getString(R.string.pause));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_PAUSED)) {
+      downloadButton.setText(getString(R.string.resume));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_STOPPED)) {
+      //downloadButton.setText(getString(R.string.start));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_ERROR)) {
+      //downloadButton.setText(getString(R.string.alert));
+      return;
+    }
   }
 
 
@@ -209,18 +231,18 @@ public class PlayBookFragment extends BaseFragment {
    * Move the seek bar to reflect the current playback position within the book chapter.
    * Making sure the passed event is of type progress update happens in the calling code.
    *
-   * @param playbackEvent
+   * @param duration
+   * @param position
    */
-  public void redrawPlaybackPosition(PlaybackEvent playbackEvent) {
-
+  public void redrawPlaybackPosition(Long duration, Long position) {
     // TODO: intValue may overflow, and 0 may not be best default value.  fix to handle.
-    int max = playbackEvent.duration() != null ? playbackEvent.duration().intValue() : 0;
-    int progress = playbackEvent.position() != null ? playbackEvent.position().intValue() : 0;
+    int max = duration != null ? duration.intValue() : 0;
+    int progress = position != null ? position.intValue() : 0;
     playbackSeekBar.setMax(max);
     playbackSeekBar.setProgress(progress);
 
-    currentTime.setText(DateTimeUtil.millisToHumanReadable(playbackEvent.position()));
-    remainingTime.setText(DateTimeUtil.millisToHumanReadable(playbackEvent.duration() - playbackEvent.position()));
+    currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
+    remainingTime.setText(DateTimeUtil.millisToHumanReadable(max - progress));
   }
 
 
@@ -235,6 +257,8 @@ public class PlayBookFragment extends BaseFragment {
     if (fromUser) {
       if (seekBar.getId() == this.playbackSeekBar.getId()) {
         currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
+
+        // TODO: need to update remaining time?  can combine with method above?
       }
     }
   }
@@ -242,12 +266,10 @@ public class PlayBookFragment extends BaseFragment {
 
   /**
    * Update the progress bar to reflect where we are in the downloading.
+   *
+   * @param primaryProgress
+   * @param secondaryProgress
    */
-  public void redrawDownloadProgress(DownloadEvent downloadEvent) {
-    this.redrawDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage());
-  }
-
-
   public void redrawDownloadProgress(Integer primaryProgress, Integer secondaryProgress) {
     downloadProgress.setProgress(primaryProgress);
     downloadProgress.setSecondaryProgress(secondaryProgress);
@@ -262,11 +284,12 @@ public class PlayBookFragment extends BaseFragment {
    * @param checked
    */
   public void redrawSpeedButton(boolean checked) {
+    // TODO
     //playbackSpeedButton.setChecked(checked);
   }
 
 
-  public void resetProgress() {
+  public void resetDownloadProgress() {
     this.redrawDownloadProgress(0, 0);
   }
 

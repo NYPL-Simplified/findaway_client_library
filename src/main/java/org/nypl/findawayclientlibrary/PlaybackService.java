@@ -1,6 +1,8 @@
 package org.nypl.findawayclientlibrary;
 
 //import io.audioengine.mobile.AudioEngine;
+import android.widget.Toast;
+
 import io.audioengine.mobile.AudioEngineException;
 //import io.audioengine.mobile.config.LogLevel;
 
@@ -29,6 +31,10 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
   private AudioService audioService;
 
+  // Provides context for methods s.a. getFilesDir(), and allows events caught
+  // by this class to be reflected in the app's UI.
+  private PlayBookActivity callbackActivity = null;
+
   // plays drm-ed audio
   private PlaybackEngine playbackEngine = null;
 
@@ -38,10 +44,11 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   long lastPlaybackPosition;
 
 
-  public PlaybackService(String APP_TAG, AudioService audioService) {
+  public PlaybackService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "PlaybackService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
+    this.callbackActivity = callbackActivity;
   }
 
 
@@ -116,7 +123,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
 
   /**
-   * TODO
+   * To satisfy rx.Observer implementation.
    */
   @Override
   public void onCompleted() {
@@ -125,11 +132,11 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
 
   /**
-   * TODO
+   * Handle playback events that are errors.
    */
   @Override
   public void onError(Throwable e) {
-    LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
+    LogHelper.e(TAG, "There was an error in the playback process: " + e.getMessage());
     e.printStackTrace();
     // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
     /*
@@ -152,32 +159,36 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
 
   /**
-   * TODO: doc
+   * Handle a playback event, s.a. a chapter completing, playback position progressing, etc..
    * @param playbackEvent
    */
   @Override
   public void onNext(PlaybackEvent playbackEvent) {
-    /* TODO: bring back:
-    if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_PROGRESS_UPDATE)) {
-      if (playBookFragment != null) {
-        playBookFragment.redrawPlaybackPosition(playbackEvent);
-      }
-
-      playbackService.setLastPlaybackPosition(playbackEvent.position());
-    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_STARTED)) {
-
-      Toast.makeText(this, "Playback started.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_PAUSED)) {
-
-      Toast.makeText(this, "Playback paused.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_STOPPED)) {
-
-      Toast.makeText(this, "Playback stopped.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code().equals(PlaybackEvent.CHAPTER_PLAYBACK_COMPLETED)) {
-      // NOTE:  "Do X to end of chapter" functionality can go here.
-      Toast.makeText(this, "Chapter completed.", Toast.LENGTH_SHORT).show();
+    if (playbackEvent == null) {
+      LogHelper.d(TAG, "onNext(PlaybackEvent playbackEvent) called with null playbackEvent");
+      return;
     }
-    */
+
+    if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_PROGRESS_UPDATE)) {
+      Long duration = playbackEvent.duration();
+      Long position = playbackEvent.position();
+
+      // ask the activity to redraw
+      callbackActivity.setPlayProgress(duration, position);
+
+      // remember where we are in the audio file now
+      this.setLastPlaybackPosition(playbackEvent.position());
+    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_STARTED)) {
+      callbackActivity.notifyPlayEvent("Playback started.");
+    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_PAUSED)) {
+      callbackActivity.notifyPlayEvent("Playback paused.");
+    } else if (playbackEvent.code().equals(PlaybackEvent.PLAYBACK_STOPPED)) {
+      callbackActivity.notifyPlayEvent("Playback stopped.");
+    } else if (playbackEvent.code().equals(PlaybackEvent.CHAPTER_PLAYBACK_COMPLETED)) {
+      // NOTE:  Sleep timer's "Do X to end of chapter" functionality can go here.
+      callbackActivity.notifyPlayEvent("Chapter completed.");
+    }
+
   }
 
   /* ------------------------------------ /PLAYBACK EVENT HANDLERS ------------------------------------- */

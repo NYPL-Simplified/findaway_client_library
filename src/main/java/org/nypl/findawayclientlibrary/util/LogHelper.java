@@ -33,12 +33,37 @@ public class LogHelper {
     /** the maximum log tag length allowed by the operating system */
     private static final int MAX_LOG_TAG_LENGTH = 23;
 
+    public static final byte DEV = 0;
+    public static final byte PROD = 1;
+
     // TODO: switch before pushing
     //private static boolean SHOW_DEBUG = BuildConfig.DEBUG;
 
     // when running debugger in AndroidStudio, doesn't always know it's in debug mode
     // set manually, and remember to unset before pushing live.
     private static boolean SHOW_DEBUG = true;
+
+
+    /**
+     * An activity may call this method to see if a developer's eye-only Toast is to be displayed.
+     * @return
+     */
+    public static byte getVerbosity() {
+        if (SHOW_DEBUG) {
+            return DEV;
+        } else {
+            return PROD;
+        }
+    }
+
+
+    /**
+     * Setter for the output verbosity level.
+     * @param showDebug
+     */
+    public static void setShowDebug(boolean showDebug) {
+        SHOW_DEBUG = showDebug;
+    }
 
 
     /**
@@ -189,7 +214,9 @@ public class LogHelper {
         } else {
             StringBuilder sb = new StringBuilder();
             if (messages != null) for (Object m : messages) {
-                sb.append(m);
+                if (m != null) {
+                    sb.append(m);
+                }
             }
             if (t != null) {
                 sb.append("\n").append(Log.getStackTraceString(t));
