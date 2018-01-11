@@ -3,38 +3,42 @@ package org.nypl.findawayclientlibrary;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Environment;
-import android.support.v4.media.session.MediaControllerCompat;
-import android.util.Log;
+
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
+
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.widget.Toolbar;
+
+//import android.util.Log;
+
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import java.io.File;
-
-import io.audioengine.mobile.AudioEngineEvent;
-import io.audioengine.mobile.PlaybackEvent;
-import io.audioengine.mobile.config.LogLevel;
-import io.audioengine.mobile.AudioEngine;
-import io.audioengine.mobile.AudioEngineException;
+import io.audioengine.mobile.PlayRequest;
 
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadStatus;
 
-import io.audioengine.mobile.persistence.DeleteRequest;
-import io.audioengine.mobile.persistence.DownloadEngine;
-import io.audioengine.mobile.persistence.DownloadRequest;
-import io.audioengine.mobile.persistence.DownloadType;
+import io.audioengine.mobile.DownloadRequest;
+import io.audioengine.mobile.DownloadType;
 
-import io.audioengine.mobile.play.PlaybackEngine;
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
+// TODO: infuture branch, separate LogHelper out so can call on it from both findaway and rbdigital libraries
+import org.nypl.findawayclientlibrary.util.LogHelper;
 
+// talks to the findaway sdk for us
 
 
 /**
@@ -126,10 +130,10 @@ import rx.schedulers.Schedulers;
  * currently have an easy-to-check code.  The session expiring could probably be found in the error message.  Since it's a rare event, it'd
  * be OK to resolve all major errors by obtaining a new session key and re-trying the download.
  */
-public class PlayBookActivity extends BaseActivity implements View.OnClickListener, View.OnLongClickListener,
-                                                              Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
-  // so can filter all log msgs belonging to my app
-  private static final String APP_TAG = "FDLIB.";
+//public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
+//        View.OnClickListener, View.OnLongClickListener, Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
+public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
+          View.OnClickListener, View.OnLongClickListener, SeekBar.OnSeekBarChangeListener {
   // so can do a search in log msgs for just this class's output
   private static final String TAG = APP_TAG + "PlayBookActivity";
 
@@ -139,14 +143,15 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   PlayBookFragment playBookFragment = null;
 
   // the one engine to control them all
-  private static AudioEngine audioEngine = null;
+  //private static AudioEngine audioEngine = null;
 
   // fulfills books
-  DownloadEngine downloadEngine = null;
+  //DownloadEngine downloadEngine = null;
   private DownloadRequest downloadRequest;
 
   // plays drm-ed audio
-  private PlaybackEngine playbackEngine;
+  //private PlaybackEngine playbackEngine;
+  private PlayRequest playRequest;
 
   // follows all download engine events
   private Subscription eventsSubscription;
@@ -160,9 +165,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   String sessionIdReal3 = "a54406b6-76cf-4241-bbf6-7f1e8b76d7f4";
   String sessionIdReal4 = "720ba35d-8920-4621-9749-17f7ebe56316";
   String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
-
-  // fake -- real one with a letter changed
-  String sessionIdFake1 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf61";
+  String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
 
   // Kevin's test value
   // String contentId = "83380";
@@ -173,8 +176,10 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   //String license = "5744a7b7b692b13bf8c06865";
   // Darya's value keyed to licenseId of the book NYPL bought through Bibliotheca
   //String license = "57db1411afde9f3e7a3c041b";
-  String license = "57ff8f27afde9f3cea3c041b";
+  //String license = "57ff8f27afde9f3cea3c041b";
+  String license = "57db1411afde9f3e7a3c041b";
 
+  // TODO: instead of radial gradient, do a gentle square bottom -> top gradient, and make the colors gray-blue.
 
   /*
   {"format":"MP3","items":[{"title":"Track 1","sequence":1,"part":0,"duration":16201},{"title":"Track 2","sequence":2,"part":0,"duration":336070},{"title":"Track 3","sequence":3,"part":0,"duration":247803},{"title":"Track 4","sequence":4,"part":0,"duration":348714},{"title":"Track 5","sequence":5,"part":0,"duration":508844},{"title":"Track 6","sequence":6,"part":0,"duration":323767},{"title":"Track 7","sequence":7,"part":0,"duration":386408},{"title":"Track 8","sequence":8,"part":0,"duration":415953},{"title":"Track 9","sequence":9,"part":0,"duration":275832},{"title":"Track 10","sequence":10,"part":0,"duration":372851},{"title":"Track 11","sequence":11,"part":0,"duration":515793},{"title":"Track 12","sequence":12,"part":0,"duration":289886},{"title":"Track 13","sequence":13,"part":0,"duration":345239},{"title":"Track 14","sequence":14,"part":0,"duration":334111},{"title":"Track 15","sequence":15,"part":0,"duration":356080},{"title":"Track 16","sequence":16,"part":0,"duration":459055},{"title":"Track 17","sequence":17,"part":0,"duration":310993},{"title":"Track 18","sequence":18,"part":0,"duration":294771},{"title":"Track 19","sequence":19,"part":0,"duration":443277},{"title":"Track 20","sequence":20,"part":0,"duration":264286},{"title":"Track 21","sequence":21,"part":0,"duration":348322},{"title":"Track 22","sequence":22,"part":0,"duration":355009},{"title":"Track 23","sequence":23,"part":0,"duration":346441},{"title":"Track 24","sequence":24,"part":0,"duration":220191},{"title":"Track 25","sequence":25,"part":0,"duration":373164},{"title":"Track 26","sequence":26,"part":0,"duration":196394},{"title":"Track 27","sequence":27,"part":0,"duration":399313},{"title":"Track 28","sequence":28,"part":0,"duration":337089},{"title":"Track 29","sequence":29,"part":0,"duration":297069},{"title":"Track 30","sequence":30,"part":0,"duration":240645},{"title":"Track 31","sequence":31,"part":0,"duration":387323},{"title":"Track 32","sequence":32,"part":0,"duration":298036},{"title":"Track 33","sequence":33,"part":0,"duration":367600},{"title":"Track 34","sequence":34,"part":0,"duration":269197},{"title":"Track 35","sequence":35,"part":0,"duration":494189},{"title":"Track 36","sequence":36,"part":0,"duration":393932},{"title":"Track 37","sequence":37,"part":0,"duration":309321},{"title":"Track 38","sequence":38,"part":0,"duration":341321},{"title":"Track 39","sequence":39,"part":0,"duration":415091},{"title":"Track 40","sequence":40,"part":0,"duration":304044},{"title":"Track 41","sequence":41,"part":0,"duration":417076},{"title":"Track 42","sequence":42,"part":0,"duration":368932},{"title":"Track 43","sequence":43,"part":0,"duration":411198},{"title":"Track 44","sequence":44,"part":0,"duration":298271},{"title":"Track 45","sequence":45,"part":0,"duration":300230},{"title":"Track 46","sequence":46,"part":0,"duration":342758},{"title":"Track 47","sequence":47,"part":0,"duration":447848},{"title":"Track 48","sequence":48,"part":0,"duration":527914},{"title":"Track 49","sequence":49,"part":0,"duration":406523},{"title":"Track 50","sequence":50,"part":0,"duration":334398},{"title":"Track 51","sequence":51,"part":0,"duration":307518},{"title":"Track 52","sequence":52,"part":0,"duration":407071},{"title":"Track 53","sequence":53,"part":0,"duration":488390},{"title":"Track 54","sequence":54,"part":0,"duration":432854},{"title":"Track 55","sequence":55,"part":0,"duration":364074},{"title":"Track 56","sequence":56,"part":0,"duration":367130},{"title":"Track 57","sequence":57,"part":0,"duration":329566},{"title":"Track 58","sequence":58,"part":0,"duration":305925},{"title":"Track 59","sequence":59,"part":0,"duration":528070},{"title":"Track 60","sequence":60,"part":0,"duration":416031},{"title":"Track 61","sequence":61,"part":0,"duration":524283},{"title":"Track 62","sequence":62,"part":0,"duration":306683},{"title":"Track 63","sequence":63,"part":0,"duration":297932},{"title":"Track 64","sequence":64,"part":0,"duration":384972},{"title":"Track 65","sequence":65,"part":0,"duration":383639},{"title":"Track 66","sequence":66,"part":0,"duration":441683},{"title":"Track 67","sequence":67,"part":0,"duration":263528},{"title":"Track 68","sequence":68,"part":0,"duration":412478},{"title":"Track 69","sequence":69,"part":0,"duration":252792},{"title":"Track 70","sequence":70,"part":0,"duration":324080},{"title":"Track 71","sequence":71,"part":0,"duration":361487},{"title":"Track 72","sequence":72,"part":0,"duration":403910},{"title":"Track 73","sequence":73,"part":0,"duration":510594},{"title":"Track 74","sequence":74,"part":0,"duration":535594},{"title":"Track 75","sequence":75,"part":0,"duration":472769},{"title":"Track 76","sequence":76,"part":0,"duration":284008},{"title":"Track 77","sequence":77,"part":0,"duration":419114},{"title":"Track 78","sequence":78,"part":0,"duration":417990},{"title":"Track 79","sequence":79,"part":0,"duration":32318}],
@@ -189,9 +194,18 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   // the chapter we're downloading right now
   int chapter = 1;
 
-  int seekTo;
 
-  long lastPlaybackPosition;
+  //int seekTo;
+  //long lastPlaybackPosition;
+
+  DrawerLayout drawerLayout;
+  ActionBarDrawerToggle actionBarDrawerToggle;
+  NavigationView tocNavigationView;
+
+  private AudioService audioService = new AudioService(APP_TAG, sessionIdReal1);
+  private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService, this);
+  private DownloadService downloadService = new DownloadService(APP_TAG, audioService, this);
+
 
 
   /* ---------------------------------- LIFECYCLE METHODS ----------------------------------- */
@@ -213,6 +227,43 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
     // change the title displayed in the top bar from the app name (default) to something indicative
     //getSupportActionBar().setTitle("Audio Player UI Here");
+
+    // set the top menu toolbar
+    Toolbar toolbar = (Toolbar) findViewById(R.id.top_nav_toolbar);
+    // changes the left icon, which by default is the material design back arrow
+    //toolbar.setNavigationIcon(R.drawable.menu_icon_books);
+    toolbar.setOverflowIcon(getResources().getDrawable(R.drawable.toc_dark));
+
+    setSupportActionBar(toolbar);
+
+    // NOTE: setDisplayHomeAsUpEnabled makes the icon and title in the action bar clickable and adds a "<-", so that "up" (ancestral) navigation can be provided.
+    // setHomeButtonEnabled is like setDisplayHomeAsUpEnabled, except "<-" doesn’t show up unless the android:parentActivityName is specified.
+    // setDisplayShowHomeEnabled controls whether to show the Activity icon/logo or not.
+
+    // NOTE: the back/up button knows where to go by the parentActivity declared in the manifest.
+    // getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+    // remove the title displayed in the top bar, we'll need the space for menu buttons
+    getSupportActionBar().setTitle(null);
+
+    // drawer_layout is defined in playback_activity_main.xml, and contains both the toolbar and the TOC ListView
+    drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+
+    actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+    // do not display the burger "open drawer" icon or the <- "close drawer" icon
+    actionBarDrawerToggle.setDrawerIndicatorEnabled(false);
+
+    drawerLayout.addDrawerListener(actionBarDrawerToggle);
+    actionBarDrawerToggle.syncState();
+    tocNavigationView = (NavigationView) findViewById(R.id.toc_drawer_view);
+    tocNavigationView.setNavigationItemSelectedListener(this);
+
+    // make sure we're allowed to proceed to starting the media session
+    boolean allowedToProceed = checkAppPermissions();
+    if (!allowedToProceed) {
+      // TODO: future branch: go to My Books, and throw a notification explaining why.
+      LogHelper.e(TAG, "PlayBookActivity.onCreate: Did not get needed permissions from user.");
+    }
 
     // Check that the activity is using the layout version with the fragment_container FrameLayout
     if (findViewById(R.id.fragment_container) != null) {
@@ -252,17 +303,23 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
             //bookId = extras.getString("audiobook_id", null);
         }
       }
+
+      //if (bookId == null) {
+        // TODO: when code for error message toasts, display an error message here and don't load player UI.
+      //}
+
+      //LogHelper.d(TAG, "bookId=" + bookId);
     }
 
 
     // one-time call to start up the AudioEngine service
-    this.initAudioEngine();
+    audioService.initAudioEngine(this);
 
     // ask the AudioEngine to start a DownloadEngine
-    this.initDownloadEngine();
+    downloadService.initDownloadEngine();
 
     // ask the AudioEngine to start a PlaybackEngine
-    this.initPlaybackEngine();
+    playbackService.initPlaybackEngine();
   }// onCreate
 
 
@@ -285,7 +342,10 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   protected void onPause() {
     super.onPause();
 
-    if (!eventsSubscription.isUnsubscribed()) {
+    // TODO:  got a null pointer exception when clicking back twice from screen
+    // get all the code separated and returned, and if still having null here,
+    // find out why.
+    if (eventsSubscription != null && !eventsSubscription.isUnsubscribed()) {
       eventsSubscription.unsubscribe();
     }
   }
@@ -299,79 +359,15 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   protected void onResume() {
     super.onResume();
 
+
     // a stream of _all_ download events for the supplied content id
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
-    eventsSubscription = downloadEngine.events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
+    eventsSubscription = downloadService.subscribeDownloadEventsAll(downloadService, contentId);
 
-    // a stream of just download status changes for the supplied content id
-    downloadEngine.getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<DownloadStatus>() {
+    //downloadProgressSubscription = downloadService.subscribeDownloadEventsProgress(null, contentId);
 
-      @Override
-      public void onCompleted() {
-
-      }
-
-      @Override
-      public void onError(Throwable e) {
-
-      }
-
-      @Override
-      public void onNext(DownloadStatus downloadStatus) {
-        if (downloadStatus == DownloadStatus.DOWNLOADED) {
-          if (playBookFragment != null) {
-            playBookFragment.redrawDownloadButton(getResources().getString(R.string.delete));
-          } else {
-            Toast.makeText(getApplicationContext(), R.string.delete, Toast.LENGTH_LONG).show();
-          }
-        } else {
-          if (downloadStatus == DownloadStatus.QUEUED || downloadStatus == DownloadStatus.DOWNLOADING) {
-            if (playBookFragment != null) {
-              playBookFragment.redrawDownloadButton(getResources().getString(R.string.pause));
-            } else {
-              Toast.makeText(getApplicationContext(), R.string.pause, Toast.LENGTH_LONG).show();
-            }
-          } else {
-            if (downloadStatus == DownloadStatus.PAUSED || downloadStatus == DownloadStatus.NOT_DOWNLOADED) {
-              if (playBookFragment != null) {
-                playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-              } else {
-                Toast.makeText(getApplicationContext(), R.string.download, Toast.LENGTH_LONG).show();
-              }
-            }
-          }
-        }
-      }
-    }); //downloadEngine.status.subscribe
-
-
-    downloadEngine.getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
-
-      @Override
-      public void onCompleted() {
-
-        Log.d(TAG, "Initial progress complete.");
-      }
-
-      @Override
-      public void onError(Throwable e) {
-
-        Log.d(TAG, "Initial progress error: " + e.getMessage());
-      }
-
-      @Override
-      public void onNext(Integer progress) {
-
-        Log.d(TAG, "Got initial progress " + progress);
-
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadProgress(progress, 0);
-        }
-      }
-    }); //downloadEngine.progress.subscribe
-
-
-    eventsSubscription = playbackEngine.events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
+    // TODO: bring back, referencing download service instead of this
+    //eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
   }
 
 
@@ -419,7 +415,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   @Override
   protected void onStart() {
     super.onStart();
-    Log.d(TAG, "Activity.onStart");
+    LogHelper.d(TAG, "Activity.onStart");
 
   }
 
@@ -437,71 +433,180 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   /* ---------------------------------- /LIFECYCLE METHODS ----------------------------------- */
 
 
+  /* ------------------------------------ NAVIGATION EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Highlight the chapter being played in the TOC, and scroll the TOC to show that chapter
+   * towards the center of the screen.
+   */
+  public void drawChosenTableOfContentsMenuItem() {
+    // see https://stackoverflow.com/questions/31233279/navigation-drawer-how-do-i-set-the-selected-item-at-startup?rq=1
+
+  }
+
+
+  /**
+   * For now:  Hardcoded method for demo purposes that fills the right nav toc menu with
+   * chapter information.
+   * Later:  Will accept a list of chapters and could be called when the book's metadata changes.
+   */
+  public void loadTableOfContentsMenu() {
+
+    final Menu menu = tocNavigationView.getMenu();
+
+    int groupId = R.id.group_chapter_menu;
+    for (int menuItemId = 10; menuItemId <= 13; menuItemId++) {
+      int order = menuItemId;
+      MenuItem menuItem = menu.add(groupId, menuItemId, order, "Chapter " + menuItemId);
+      menuItem.setIcon(R.drawable.ic_radio_button_unchecked_black_24dp);
+      menuItem.setCheckable(true);
+    }
+
+    // code from SO to update the nav menu through its adapter.  I don't think it should be necessary, but testing here:
+    for (int i = 0, count = tocNavigationView.getChildCount(); i < count; i++) {
+      final View child = tocNavigationView.getChildAt(i);
+      if (child != null && child instanceof ListView) {
+        final ListView menuView = (ListView) child;
+        //final HeaderViewListAdapter adapter = (HeaderViewListAdapter) menuView.getAdapter();
+        //final BaseAdapter wrapped = (BaseAdapter) adapter.getWrappedAdapter();
+        //wrapped.notifyDataSetChanged();
+      }
+    }
+  }
+
+
+  /**
+   * Find out if the table of contents is open.  If it is, then close it.
+   * Else, the user must really mean to go back to a previous fragment,
+   * or maybe to leave the activity altogether for a previous screen.
+   * Do that for them.
+   */
+  @Override
+  public void onBackPressed() {
+    if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+      drawerLayout.closeDrawer(GravityCompat.END);
+    } else {
+      super.onBackPressed();
+    }
+
+  }
+
+
+  /**
+   * Fill up and inflate the top navigation bar.
+   * If we have a book to load, then also load its table of contents menu.
+   *
+   * NOTE:  It is not permitted to add menu items in the Activity an then add more items in the child Fragment.
+   * If creating menu from inside multiple fragments' onCreateOptionsMenu(), then make sure to call menu.clear()
+   * at the beginning of each fragment's onCreateOptionsMenu().
+   * If changing menu items, based on context, use onPrepareOptionsMenu(), which is called every time user clicks on the menu bar.
+   *
+   * @param menu
+   * @return
+   */
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    // Inflate the menu; this adds items to the action bar if it is present.
+    getMenuInflater().inflate(R.menu.action_toolbar, menu);
+
+    // dynamically populate the TOC with either the hard-coded test data or the book metadata.
+    // can also be called from other parts of the code, s.a. when the user selects a new book.
+    loadTableOfContentsMenu();
+
+    return super.onCreateOptionsMenu(menu);
+  }
+
+
+  /**
+   * A chapter got clicked in the table of contents menu.  Play that chapter,
+   * and visibly mark it as selected in the menu.
+   *
+   * @param item
+   * @return
+   */
+  @Override
+  public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+    // TODO: gray highlight isn't appearing, previously selected chapter's icon isn't resetting
+
+    int checkedItemId = item.getItemId();
+
+    final Menu navMenu = tocNavigationView.getMenu();
+    int menuSize = navMenu.size();
+    for (int i=0; i<menuSize; i++) {
+      MenuItem menuItem = navMenu.getItem(i);
+      // unselect the menu item if it's not our selected one
+      // NOTE: if doesn't work, try invisible menu item, like in https://stackoverflow.com/questions/36051045/how-to-uncheck-checked-items-in-navigation-view/39017882
+      if (menuItem.getItemId() != checkedItemId) {
+        menuItem.setChecked(false);
+
+        if (menuItem.getGroupId() == R.id.group_chapter_menu) {
+          // if menu item has a chapter icon, draw the "unchecked" version
+          menuItem.setIcon(R.drawable.ic_radio_button_unchecked_black_24dp);
+          LogHelper.d(TAG, "I definitely set it");
+        }
+      }
+    }
+
+    // set the selected chapter's icon to "checked"
+    item.setChecked(true);
+    tocNavigationView.setCheckedItem(checkedItemId);
+    item.setIcon(R.drawable.ic_radio_button_checked_black_24dp);
+
+    // TODO: start playing the selected chapter
+    //audioService.setChapterPosition(0);
+    //audioService.playTrack();
+
+    drawerLayout.closeDrawer(GravityCompat.END);
+    return true;
+  }
+
+
+  /**
+   * Called by OS when the user selects one of the top nav app bar items.
+   *
+   * @param item  Indicates which item was clicked.  item.getItemId() corresponds to <item> element's android:id attribute.
+   * @return
+   */
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    // Handle action bar item clicks here. The action bar will
+    // automatically handle clicks on the Home/Up button, so long
+    // as you specify a parent activity in AndroidManifest.xml.
+    int id = item.getItemId();
+
+    // User chose the "Settings" item, show the app settings UI...
+    if (id == R.id.action_sleep_timer) {
+      return true;
+    }
+
+    // If we were running everything on one codebase, then the standard way to handle the "up" action
+    // would be to not call for it here, but to let the super.onOptionsItemSelected() handle it.  Because we're running
+    // from a library project, we would not be able to specify a calling project's activity as PlayBookActivity's
+    // parent activity in the manifest.  So we must handle the call to return to parent in the java code ourselves.
+    if (id == android.R.id.home) {
+      LogHelper.d(TAG, "action bar clicked");
+      // TODO: finish(); return true; would stop the activity and go up a level to the calling activity.
+    }
+
+
+    if (id == R.id.action_table_of_contents) {
+      if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
+        drawerLayout.closeDrawer(GravityCompat.END);
+      } else {
+        drawerLayout.openDrawer(GravityCompat.END);
+      }
+      return true;
+    }
+
+    // If we got here, the user's action was not recognized.  Invoke the superclass to handle it.
+    return super.onOptionsItemSelected(item);
+  }
+
+
+  /* ------------------------------------ /NAVIGATION EVENT HANDLERS ------------------------------------- */
+
 
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
-
-
-  /**
-   * AudioEngine needs the sessionKey that comes from the Bibliotheca
-   * https://partner.yourcloudlibrary.com/cirrus/library/[libraryId]/GetItemAudioFulfillment endpoint.
-   */
-  private void initAudioEngine() {
-    try {
-      AudioEngine.init(this, sessionIdReal1, LogLevel.VERBOSE);
-      audioEngine = AudioEngine.getInstance();
-    } catch (AudioEngineException e) {
-      Log.e(TAG, "Error getting audio engine: " + e.getMessage());
-      e.printStackTrace();
-    } catch (Exception e) {
-      Log.e(TAG, "Error getting audio engine: " + e.getMessage());
-      e.printStackTrace();
-    }
-  }
-
-
-  /**
-   * TODO: DownloadEngine needs the following setup: [...].
-   */
-  private void initDownloadEngine() {
-    try {
-      if (audioEngine == null) {
-        throw new Exception("Must initialize AudioEngine before trying to get a DownloadEngine.");
-      }
-
-      downloadEngine = audioEngine.getDownloadEngine();
-    } catch (AudioEngineException e) {
-      // Call to getDownloadEngine will throw an exception if you have not previously
-      // called init() on AudioEngine with a valid Context and Session.
-      Log.e(TAG, "Error getting download engine: " + e.getMessage());
-      e.printStackTrace();
-    } catch (Exception e) {
-      Log.e(TAG, "Error getting download engine: " + e.getMessage());
-      e.printStackTrace();
-    }
-  }
-
-
-  /**
-   * TODO: .
-   */
-  private void initPlaybackEngine() {
-    try {
-      if (audioEngine == null) {
-        throw new Exception("Must initialize AudioEngine before trying to get a PlaybackEngine.");
-      }
-
-      playbackEngine = audioEngine.getPlaybackEngine();
-    } catch (AudioEngineException e) {
-      Log.e(TAG, "Error getting playback engine: " + e.getMessage());
-      e.printStackTrace();
-    } catch (Exception e) {
-      Log.e(TAG, "Error getting playback engine: " + e.getMessage());
-      e.printStackTrace();
-    }
-
-    seekTo = 0;
-    lastPlaybackPosition = 0;
-  }
 
 
   /**
@@ -523,17 +628,17 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
     // The system does skip any chapters that are already downloaded.  So, if we need to re-download a chapter,
     // we'd have to delete it first then call download.
 
-    Log.e(TAG, "before making downloadRequest, part=" + part + ", chapter=" + chapter);
+    LogHelper.e(TAG, "before making downloadRequest, part=" + part + ", chapter=" + chapter);
     downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(license).type(DownloadType.TO_END_WRAP).build();
-    Log.e(TAG, "after making downloadRequest, part=" + part + ", chapter=" + chapter);
+    LogHelper.e(TAG, "after making downloadRequest, part=" + part + ", chapter=" + chapter);
 
     try {
       // Audio files are downloaded and stored under the application's standard internal files directory. This directory is deleted when the application is removed.
-      Log.e(TAG, "before downloadEngine.download \n\n\n");
-      downloadEngine.download(downloadRequest);
-      Log.e(TAG, "after downloadEngine.download \n\n\n");
+      LogHelper.e(TAG, "before downloadEngine.download \n\n\n");
+      downloadService.getDownloadEngine().download(downloadRequest);
+      LogHelper.e(TAG, "after downloadEngine.download \n\n\n");
     } catch (Exception e) {
-      Log.e(TAG, "Error getting download engine: " + e.getMessage());
+      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
       e.printStackTrace();
     }
 
@@ -583,6 +688,8 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
   @Override
   public void onClick(View view) {
+    // TODO: the download should start automatically, when needed
+/*
     if (view.getId() == R.id.download_button) {
 
       Button downloadButton = (Button) view;
@@ -592,78 +699,90 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
       } else if (downloadButton.getText().equals(getString(R.string.pause))) {
 
-        downloadEngine.pause(downloadRequest);
+        playbackService.getDownloadEngine().pause(downloadRequest);
 
       } else if (downloadButton.getText().equals(getString(R.string.resume))) {
 
-        downloadEngine.download(downloadRequest);
+        playbackService.getDownloadEngine().download(downloadRequest);
 
       } else if (downloadButton.getText().equals(getString(R.string.delete))) {
 
-        downloadEngine.delete(DeleteRequest.builder().contentId(contentId).build());
+        playbackService.getDownloadEngine().delete(DeleteRequest.builder().contentId(contentId).build());
       }
     }
+*/
 
+    if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.play))) {
+      LogHelper.d(TAG, "playback PLAY button clicked");
 
-    if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.play))) {
-      Log.d(TAG, "playback PLAY button clicked");
+      try {
+        // NOTE: Can specify the chapter to start playing at here.
+        //playbackService.getPlaybackEngine().play(license, contentId, part, chapter, (int) playbackService.getLastPlaybackPosition());
 
-      // NOTE: Can specify the chapter to start playing at here.
-      playbackEngine.play(license, contentId, part, chapter, (int) lastPlaybackPosition);
+        playRequest = PlayRequest.builder().contentId(contentId).part(part).chapter(chapter).license(license).position((int) playbackService.getLastPlaybackPosition()).build();
+        playbackService.getPlaybackEngine().play(playRequest);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+        LogHelper.e(TAG, e, "play call generated a problem");
+      }
       if (playBookFragment != null) {
         playBookFragment.redrawPlayButton(getResources().getString(R.string.pause), R.drawable.ic_pause_circle_outline_black_24dp);
       }
 
     } else {
-        if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.pause))) {
-        Log.d(TAG, "playback PAUSE button clicked");
-        playbackEngine.pause();
+        if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.pause))) {
+          LogHelper.d(TAG, "playback PAUSE button clicked");
+          playbackService.getPlaybackEngine().pause();
 
         if (playBookFragment != null) {
           playBookFragment.redrawPlayButton(getResources().getString(R.string.resume), R.drawable.ic_play_circle_outline_black_24dp);
         }
 
       } else {
-        if (view.getId() == R.id.play && view.getTag().equals(getResources().getString(R.string.resume))) {
-          Log.d(TAG, "playback RESUME button clicked");
-          playbackEngine.resume();
+        if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.resume))) {
+          LogHelper.d(TAG, "playback RESUME button clicked");
+          playbackService.getPlaybackEngine().resume();
 
           if (playBookFragment != null) {
             playBookFragment.redrawPlayButton(getResources().getString(R.string.pause), R.drawable.ic_pause_circle_outline_black_24dp);
           }
         } else {
-          if (view.getId() == R.id.back10) {
+          if (view.getId() == R.id.rewind_button) {
             // TODO: what code would make sure not crossing boundary condition on file length?
-            Log.d(TAG, "playback BACK10 button clicked");
-            playbackEngine.seekTo(playbackEngine.getPosition() - 10000);
+            LogHelper.d(TAG, "playback BACK10 button clicked");
+            playbackService.getPlaybackEngine().seekTo(playbackService.getPlaybackEngine().getPosition() - 10000);
           } else {
-            if (view.getId() == R.id.forward10) {
-              Log.d(TAG, "playback FWD10 button clicked");
-              playbackEngine.seekTo(playbackEngine.getPosition() + 10000);
+            if (view.getId() == R.id.forward_button) {
+              LogHelper.d(TAG, "playback FWD10 button clicked");
+              playbackService.getPlaybackEngine().seekTo(playbackService.getPlaybackEngine().getPosition() + 10000);
             } else {
-              if (view.getId() == R.id.previous) {
-                playbackEngine.previousChapter();
+              if (view.getId() == R.id.previous_track_button) {
+                playbackService.getPlaybackEngine().previousChapter();
               } else {
-                if (view.getId() == R.id.next) {
-                  playbackEngine.nextChapter();
+                if (view.getId() == R.id.next_track_button) {
+                  playbackService.getPlaybackEngine().nextChapter();
                 } else {
+                  /*
+                 // TODO: call from drop-down menu
                   if (view.getId() == R.id.playback_speed_button) {
                     // change playback speed
                     if (((ToggleButton) view).isSelected() == true) {
-                      playbackEngine.setSpeed(1.0f);
+                      playbackService.getPlaybackEngine().setSpeed(1.0f);
                       // setChecked sets the intrinsic boolean dataMember associated with your view object
                       ((ToggleButton) view).setChecked(false);
                       // setSelected sets the UI associated with your view object
                       ((ToggleButton) view).setSelected(false);
-                      Log.d(TAG, "toggle button clicked: " + ((ToggleButton) view).isChecked() + ", speed=" + playbackEngine.getSpeed());
+                      Log.d(TAG, "toggle button clicked: " + ((ToggleButton) view).isChecked() + ", speed=" + playbackService.getPlaybackEngine().getSpeed());
                     } else {
-                      playbackEngine.setSpeed(2.0f);
+                      playbackService.getPlaybackEngine().setSpeed(2.0f);
                       ((ToggleButton) view).setChecked(true);
                       ((ToggleButton) view).setSelected(true);
                     }
                   } else {
-                    Log.e(TAG, "Cannot recognize clicked button.");
-                  }
+                    */
+                  LogHelper.e(TAG, "Cannot recognize clicked button.");
+                  //}
                 }
               }
             }
@@ -676,50 +795,20 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
 
   @Override
-  public void onCompleted() {
-    // ignore
-  }
-
-
-  @Override
-  public void onError(Throwable e) {
-    Log.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
-    e.printStackTrace();
-    // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
-    /*
-11.324 5192-5192/org.nypl.findawaysdkdemo W/System.err: rx.exceptions.MissingBackpressureException
-11-17 22:18:11.329 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.onNext(OperatorObserveOn.java:160)
-11-17 22:18:11.334 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.onNext(OperatorSubscribeOn.java:53)
-11-17 22:18:11.338 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.RelaySubscriptionManager$RelayObserver.onNext(RelaySubscriptionManager.java:205)
-11-17 22:18:11.342 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.PublishRelay.call(PublishRelay.java:47)
-11-17 22:18:11.346 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedAction1.call(SerializedAction1.java:84)
-11-17 22:18:11.350 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedRelay.call(SerializedRelay.java:20)
-11-17 22:18:11.354 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.PlayerEventBus.send(PlayerEventBus.java:33)
-11-17 22:18:11.358 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.FindawayMediaPlayer.onPlayerStateChanged(FindawayMediaPlayer.java:373)
-11-17 22:18:11.363 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl.handleEvent(ExoPlayerImpl.java:206)
-11-17 22:18:11.368 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl$1.handleMessage(ExoPlayerImpl.java:65)
-11-17 22:18:11.371 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Handler.dispatchMessage(Handler.java:102)
-11-17 22:18:11.375 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Looper.loop(Looper.java:154)
-11-17 22:18:11.379 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.HandlerThread.run(HandlerThread.java:61)
-     */
-  }
-
-
-  @Override
   public boolean onLongClick(View view) {
-
+    /* TODO
     if (view.getId() == R.id.download_button) {
 
       Button downloadButton = (Button) view;
 
       if (downloadButton.getText().equals(getString(R.string.pause))) {
 
-        downloadEngine.cancel(downloadRequest);
+        playbackService.getDownloadEngine().cancel(downloadRequest);
 
         return true;
       }
     }
-
+  */
     return false;
   }
 
@@ -728,8 +817,8 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
    * Catches AudioEngineEvent events and redirects processing to either the download or playback event-handling methods.
    *
    * Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-   * @param engineEvent
-   */
+   //* @param engineEvent
+   * /
   @Override
   public void onNext(AudioEngineEvent engineEvent) {
     if (engineEvent instanceof DownloadEvent) {
@@ -740,183 +829,8 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
       }
     }
   }
+  */
 
-
-  /**
-   * Catches DownloadEngine events.
-   *
-   * Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-   * @param downloadEvent
-   */
-  public void onNext(DownloadEvent downloadEvent) {
-    File filesDir = getFilesDir();
-    if (filesDir.exists()) {
-      Log.d(TAG, "filesDir.getAbsolutePath=" + filesDir.getAbsolutePath());
-      String[] filesList = filesDir.list();
-      Log.d(TAG, "filesDir.filesList=" + filesList.length);
-    }
-
-    String sharedPrefsPath = "shared_prefs/";
-    File sharedPrefsDir = new File(getFilesDir(), "../" + sharedPrefsPath);
-    if (sharedPrefsDir.exists()) {
-      Log.d(TAG, "sharedPrefsDir.getAbsolutePath=" + sharedPrefsDir.getAbsolutePath());
-      String[] filesList = sharedPrefsDir.list();
-      Log.d(TAG, "sharedPrefsDir.filesList=" + filesList.length);
-    }
-
-    if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-      File externalFilesDir = getExternalFilesDir(null);
-      if (externalFilesDir.exists()) {
-        Log.d(TAG, "externalFilesDir.getAbsolutePath=" + externalFilesDir.getAbsolutePath());
-        String[] externalFilesList = externalFilesDir.list();
-        Log.d(TAG, "externalFilesDir.externalFilesList=" + externalFilesList.length);
-      }
-    }
-
-
-    Log.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter);
-    Log.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage);
-    Log.d(TAG, "downloadEvent.content=" + downloadEvent.content);
-    Log.d(TAG, "downloadEvent.content_download_percentage=" + downloadEvent.contentPercentage);
-    Log.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
-
-    if (downloadEvent.isError()) {
-
-      // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-      // don't think it's related to the download error.
-
-      // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-      // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-      // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-      // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-      // and also the chapter object is all nulled when onNext isError.
-      // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-      // that's thrown from the findaway internal sdk code:
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-      // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-      // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-      // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-      // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-      // and some nicer stack trace, coming from the findaway sdk:
-      // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      Toast.makeText(this, "Download error occurred: " + downloadEvent.getMessage(), Toast.LENGTH_LONG).show();
-
-      Log.e(TAG, "downloadEvent.getMessage=" + downloadEvent.getMessage());
-      Log.e(TAG, "downloadEvent.getCause=", downloadEvent.getCause());
-      Log.e(TAG, "downloadEvent.code=" + downloadEvent.code);
-
-
-      Log.e(TAG, "downloadEvent.getStackTrace:");
-      StackTraceElement[] elements = Thread.currentThread().getStackTrace();
-      for (int i = 0; i < elements.length; i++) {
-        Log.e("Test", String.format("stack element[%d]: %s", i, elements[i]));
-      }
-
-      // NOTE:  The error sending is being re-worked by Findaway, and might change.  Here's the
-      // description of how it currently works:
-      // "Currently, if the license you supply is not found you'll get a AUDIO_NOT_FOUND.
-      // If the license is found but not valid for the requested content you'll get an HTTP_ERROR.
-      // If the license does not match the checkout you'll get a FORBIDDEN.
-      // If the license is valid but not actually checked out you'll get a HTTP_ERROR
-      // Lastly, HTTP_ERROR is currently the catch all. So, 500's on our end will result in that error code as well."
-      // All codes listed here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
-      if (DownloadEvent.HTTP_ERROR.equals(downloadEvent.code)) {
-        // decide if want to re-try downloading or throw a "sorry" message to user.
-        Log.e(TAG, "DownloadEvent.HTTP_ERROR");
-      } else if (DownloadEvent.FORBIDDEN.equals(downloadEvent.code)) {
-        Log.e(TAG, "DownloadEvent.FORBIDDEN");
-      } else if (DownloadEvent.ERROR_DOWNLOADING_FILE.equals(downloadEvent.code)) {
-        Log.e(TAG, "DownloadEvent.ERROR_DOWNLOADING_FILE");
-        // TODO: one possibility is downloadEvent.getMessage() == "write failed: ENOSPC (No space left on device)",
-        // which would be hard to catch based on a string message, but common enough to need handling.
-
-      }
-
-    } else {
-      if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_STARTED)) {
-
-        Toast.makeText(this, getString(R.string.downloadStarted), Toast.LENGTH_SHORT).show();
-
-        if (playBookFragment != null) {
-          // NOTE: changes the downloadButton.getText() to return "Pause"
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.pause));
-        }
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_PAUSED)) {
-
-        Toast.makeText(this, getString(R.string.downloadPaused), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.resume));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
-
-        Toast.makeText(this, getString(R.string.downloadCancelled), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.chapterDownloaded, downloadEvent.chapter.friendlyName()), Toast.LENGTH_SHORT).show();
-
-      } else if (downloadEvent.code.equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
-
-        Toast.makeText(this, getString(R.string.downloadComplete), Toast.LENGTH_SHORT).show();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.delete));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DELETE_COMPLETE)) {
-
-        Toast.makeText(this, getString(R.string.deleteComplete), Toast.LENGTH_SHORT).show();
-        resetProgress();
-        if (playBookFragment != null) {
-          playBookFragment.redrawDownloadButton(getResources().getString(R.string.download));
-        }
-
-      } else if (downloadEvent.code.equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
-
-        setProgress(downloadEvent);
-
-      } else {
-
-        Log.w(TAG, "Unknown download event: " + downloadEvent.code);
-      }
-    }
-  }// onNext(DownloadEvent)
-
-
-  /**
-   *
-   * @param playbackEvent
-   */
-  public void onNext(PlaybackEvent playbackEvent) {
-
-    if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_PROGRESS_UPDATE)) {
-      if (playBookFragment != null) {
-        playBookFragment.redrawPlaybackPosition(playbackEvent);
-      }
-
-      lastPlaybackPosition = playbackEvent.position;
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_STARTED)) {
-
-      Toast.makeText(this, "Playback started.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_PAUSED)) {
-
-      Toast.makeText(this, "Playback paused.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.PLAYBACK_STOPPED)) {
-
-      Toast.makeText(this, "Playback stopped.", Toast.LENGTH_SHORT).show();
-    } else if (playbackEvent.code.equals(PlaybackEvent.CHAPTER_PLAYBACK_COMPLETED)) {
-      // NOTE:  "Do X to end of chapter" functionality can go here.
-      Toast.makeText(this, "Chapter completed.", Toast.LENGTH_SHORT).show();
-    }
-  }
 
 
   public void onPlaybackComplete() {
@@ -939,7 +853,7 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
         playBookFragment.redrawPlaybackPosition(seekBar, progress, fromUser);
       }
 
-      seekTo = progress;
+      playbackService.setSeekTo(progress);
     }
   }
 
@@ -960,11 +874,14 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
   public void onStopTrackingTouch(SeekBar seekBar) {
     //if (seekBar.getId() == this.seekBar.getId()) {
 
-      playbackEngine.seekTo(seekTo);
-      eventsSubscription = playbackEngine.events()
-              .subscribeOn(Schedulers.io())
-              .observeOn(AndroidSchedulers.mainThread())
-              .subscribe(this);
+    playbackService.getPlaybackEngine().seekTo(playbackService.getSeekTo());
+
+    // TODO: fix to call playback service instead of this
+    //eventsSubscription = playbackService.getPlaybackEngine().events()
+    //        .subscribeOn(Schedulers.io())
+    //        .observeOn(AndroidSchedulers.mainThread())
+    //        .subscribe(this);
+
     //}
   }
 
@@ -989,17 +906,67 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
 
   /* ------------------------------------ UI METHODS ------------------------------------- */
 
-    private void setProgress(DownloadEvent downloadEvent) {
-      if (playBookFragment != null) {
-        playBookFragment.redrawDownloadProgress(downloadEvent);
-      }
+  /**
+   * Display or log notifications related to download events.
+   * Limit to only displaying when situation warrants, s.a. during development.
+   * @param message
+   */
+  public void notifyDownloadEvent(String message) {
+    // have more toast notifications when developing than on prod
+    if (LogHelper.getVerbosity() == LogHelper.DEV) {
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+  }
 
-    private void resetProgress() {
-      if (playBookFragment != null) {
-        playBookFragment.resetProgress();
-      }
+
+  /**
+   * Display or log notifications related to playback events.
+   * Limit to only displaying when situation warrants, s.a. during development.
+   * @param message
+   */
+  public void notifyPlayEvent(String message) {
+    // have more toast notifications when developing than on prod
+    if (LogHelper.getVerbosity() == LogHelper.DEV) {
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+  }
+
+
+  /**
+   * Update the download progress bar, and any other download-associated UI elements
+   * to reflect current download status (passed in).
+   *
+   * @param primaryProgress
+   * @param secondaryProgress
+   */
+  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, Integer status) {
+    if (playBookFragment != null) {
+      playBookFragment.redrawDownloadProgress(primaryProgress, secondaryProgress);
+
+      // change the download button's icon and text
+      playBookFragment.redrawDownloadButton(status);
+    }
+  }
+
+
+  /**
+   *
+   */
+  public void resetDownloadProgress() {
+    if (playBookFragment != null) {
+      playBookFragment.resetDownloadProgress();
+    }
+  }
+
+
+  /**
+   * Ask the fragment to update the seek bar.
+   */
+  public void setPlayProgress(Long duration, Long position) {
+    if (playBookFragment != null) {
+      playBookFragment.redrawPlaybackPosition(duration, position);
+    }
+  }
 
 
   /* ------------------------------------ /UI METHODS ------------------------------------- */
@@ -1022,12 +989,105 @@ public class PlayBookActivity extends BaseActivity implements View.OnClickListen
    * Wrapper around getSupportMediaController(), so we can call it from a child fragment.
    * @return  MediaControllerCompat that provides media control onscreen buttons.
    */
-  public MediaControllerCompat getController() {
-    return getSupportMediaController();
-  }
+  //public MediaControllerCompat getController() {
+  //  return getSupportMediaController();
+  //  return ((MediaControllerCompat) MediaControllerCompat.getMediaController());
+  //}
 
 
   /* ------------------------------------ /UTILITY METHODS ------------------------------------- */
 
 
 }
+
+
+/*
+* TODO:  when click play, get this error.  make sure that catching it safely.  the error itself might be for another reason:
+*
+* 01-03 00:11:23.608 8172-9037/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- HTTP FAILED: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
+01-03 00:11:23.609 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: java.lang.RuntimeException: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.exceptions.Exceptions.propagate(Exceptions.java:58)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observables.BlockingObservable.blockForSingle(BlockingObservable.java:464)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observables.BlockingObservable.first(BlockingObservable.java:167)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager.streamingChapter(RequestManager.java:325)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager$8.call(RequestManager.java:276)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager$8.call(RequestManager.java:265)
+01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.onNext(OnSubscribeMap.java:69)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.onNext(OperatorTake.java:76)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:45)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:22)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observers.Subscribers$5.onNext(Subscribers.java:235)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.emit(OperatorOnBackpressureLatest.java:165)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.onNext(OperatorOnBackpressureLatest.java:131)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestSubscriber.onNext(OperatorOnBackpressureLatest.java:211)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.call(OperatorObserveOn.java:224)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.schedulers.CachedThreadScheduler$EventLoopWorker$1.call(CachedThreadScheduler.java:230)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.schedulers.ScheduledAction.run(ScheduledAction.java:55)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:428)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.FutureTask.run(FutureTask.java:237)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:272)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.lang.Thread.run(Thread.java:761)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:125)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupAllHostAddr(Inet6AddressImpl.java:74)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.InetAddress.getAllByName(InetAddress.java:752)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.Dns$1.lookup(Dns.java:39)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.resetNextInetSocketAddress(RouteSelector.java:170)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.nextProxy(RouteSelector.java:136)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.next(RouteSelector.java:81)
+01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.findConnection(StreamAllocation.java:171)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.findHealthyConnection(StreamAllocation.java:121)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.newStream(StreamAllocation.java:100)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.java:42)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.java:93)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.java:93)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.java:120)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.logging.HttpLoggingInterceptor.intercept(HttpLoggingInterceptor.java:212)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.RealCall.getResponseWithInterceptorChain(RealCall.java:179)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.RealCall.execute(RealCall.java:63)
+01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.OkHttpCall.execute(OkHttpCall.java:174)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$RequestArbiter.request(RxJavaCallAdapterFactory.java:171)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1$1.request(OperatorSubscribeOn.java:80)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1$1.request(OperatorTake.java:109)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.Subscriber.setProducer(Subscriber.java:211)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.setProducer(OperatorTake.java:93)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeFilter$FilterSubscriber.setProducer(OnSubscribeFilter.java:104)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.setProducer(OperatorSubscribeOn.java:76)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$CallOnSubscribe.call(RxJavaCallAdapterFactory.java:152)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$CallOnSubscribe.call(RxJavaCallAdapterFactory.java:138)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.Observable.unsafeSubscribe(Observable.java:10142)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1.call(OperatorSubscribeOn.java:94)
+01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 8 more
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: android.system.GaiException: android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at libcore.io.Posix.android_getaddrinfo(Native Method)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:55)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:106)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 48 more
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: rx.exceptions.OnErrorThrowable$OnNextValue: OnError while emitting onNext value: null
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.onNext(OnSubscribeMap.java:73)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.onNext(OperatorTake.java:76)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:45)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:22)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observers.Subscribers$5.onNext(Subscribers.java:235)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.emit(OperatorOnBackpressureLatest.java:165)
+01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.onNext(OperatorOnBackpressureLatest.java:131)
+01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestSubscriber.onNext(OperatorOnBackpressureLatest.java:211)
+01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.call(OperatorObserveOn.java:224)
+01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 8 more
+*
+*
+* */

@@ -16,6 +16,11 @@ import org.nypl.findawayclientlibrary.BaseFragment;
  * Created by daryachernikhova on 7/24/17.
  */
 public class BaseActivity extends AppCompatActivity implements BaseFragment.ReplaceFragmentListener {
+  // so can filter all log msgs belonging to my app
+  public static final String APP_TAG = "FSLIB.";
+  // so can do a search in log msgs for just this class's output
+  private static final String TAG = APP_TAG + "BaseActivity";
+
 
 
   /**
@@ -79,6 +84,7 @@ public class BaseActivity extends AppCompatActivity implements BaseFragment.Repl
     // the fragment that is removed is stopped (not destroyed). If the user navigates back to
     // restore the fragment, it restarts. If you do not add the transaction to the back stack,
     // then the fragment is destroyed when removed or replaced.
+    // TODO: when use the hardware "back" button, get an empty screen in-between the play and the select activity screens
     fragmentTransaction.addToBackStack(null);
 
     // Commit the transaction
