@@ -27,8 +27,8 @@ import io.audioengine.mobile.PlayRequest;
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadStatus;
 
-import io.audioengine.mobile.DownloadRequest;
-import io.audioengine.mobile.DownloadType;
+//import io.audioengine.mobile.DownloadRequest;
+//import io.audioengine.mobile.DownloadType;
 
 import rx.Observer;
 import rx.Subscription;
@@ -147,7 +147,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   // fulfills books
   //DownloadEngine downloadEngine = null;
-  private DownloadRequest downloadRequest;
+  //private DownloadRequest downloadRequest;
 
   // plays drm-ed audio
   //private PlaybackEngine playbackEngine;
@@ -188,12 +188,11 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
           "licenseId":"57ff8f27afde9f3cea3c041b"}
   */
 
-  // the part we're downloading right now
-  int part = 0;
-
   // the chapter we're downloading right now
-  int chapter = 1;
+  int currentlyDownloadingChapter = 1;
 
+  // the chapter we're playing right now
+  int currentlyPlayingChapter = 1;
 
   //int seekTo;
   //long lastPlaybackPosition;
@@ -364,7 +363,20 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
     eventsSubscription = downloadService.subscribeDownloadEventsAll(downloadService, contentId);
 
-    //downloadProgressSubscription = downloadService.subscribeDownloadEventsProgress(null, contentId);
+    // We know what book this activity is to be playing.  Does this book need any downloading?
+    // Check to see all the book files have successfully downloaded.
+    Integer downloadStatus = downloadService.getDownloadStatus(contentId);
+    // If not, ask the DownloadService to either start or resume the download.
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_NEEDED) {
+      // ask to start the download
+      downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
+    }
+
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_PAUSED) {
+      // TODO:  do not see a "resume" method in the sdk.  for now, will form a new download request.
+      // test that, if I send in multiple requests with same info, it's equivalent to asking to resume the download
+      downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
+    }
 
     // TODO: bring back, referencing download service instead of this
     //eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
@@ -607,83 +619,6 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
-
-
-  /**
-   * Make a download request, and ask the download engine to fulfill it.
-   */
-  private void downloadAudio() {
-
-    // To start downloading the audio files for the chapter supplied: A valid chapter is a combination of content (book) id, part number, and chapter number.
-    // NOTE: Get the list of chapters with their durations (in milliseconds) when call the get_audiobook
-    // in the REST api.  The response to get_audiobook returns three sections, "active_products", "inactive_products",
-    // and "audiobook".  You then use the license id from "active_products" to call checkout, and use the "chapters"
-    // list from "audiobook" to make the download requests in the android sdk.  Here's some api info:
-    // http://developer.audioengine.io/api/v4/class-docs/#/definitions/Audiobook .
-
-    // NOTE:  DownloadType.TO_END gets book from specified chapter to the end of the book.
-    // DownloadType.TO_END_WRAP gets from specified chapter to the end of the book, then wraps around and
-    // gets all the beginning chapters, too.
-    // DownloadType.SINGLE gets just that chapter.
-    // The system does skip any chapters that are already downloaded.  So, if we need to re-download a chapter,
-    // we'd have to delete it first then call download.
-
-    LogHelper.e(TAG, "before making downloadRequest, part=" + part + ", chapter=" + chapter);
-    downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(license).type(DownloadType.TO_END_WRAP).build();
-    LogHelper.e(TAG, "after making downloadRequest, part=" + part + ", chapter=" + chapter);
-
-    try {
-      // Audio files are downloaded and stored under the application's standard internal files directory. This directory is deleted when the application is removed.
-      LogHelper.e(TAG, "before downloadEngine.download \n\n\n");
-      downloadService.getDownloadEngine().download(downloadRequest);
-      LogHelper.e(TAG, "after downloadEngine.download \n\n\n");
-    } catch (Exception e) {
-      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
-      e.printStackTrace();
-    }
-
-
-    /* Extra Things I Could Do according to docs:
-
-    // To get a DownloadRequest for a specific download request id:
-    // TODO:  What does this allow me to do?
-    // TODO:  Where would I get the id?  Where is the method defined?
-    String requestId = "123";
-    DownloadRequest downloadRequest(requestId);
-
-    // To get all DownloadRequests:
-    List<DownloadRequest> downloadRequests();
-
-    // To pause the download for the supplied content keeping existing progress.  pauseAll() to pause all requests
-    // TODO: where is the method defined?
-    void pause(DownloadRequest request);
-
-    // To cancel the download for the supplied content, removing any existing progress.  similarly, cancelAll().
-    void cancel(DownloadRequest request);
-
-    // To delete the audio files for a piece of content from the device.
-    void delete(DeleteRequest request)
-
-    // Get the download status for a book overall
-    Observable<DownloadStatus> getStatus(String contentId) throws ContentNotFoundException
-
-    // Get the download status for a specific chapter of a book
-    Observable<DownloadStatus> getStatus(String contentId, Integer part, Integer chapter) throws ChapterNotFoundException
-
-    // Get the download progress of a book as a percentage from 0 to 100
-    Observable<Integer> getProgress(String contentId) throws ContentNotFoundException
-
-    // Get the download progress of a chapter as a percentage from 0 to 100
-    Observable<Integer> getProgress(String contentId, Integer part, Integer chapter) throws ChapterNotFoundException
-
-    // Currently, you are not able to request a download for chapters from 2 different books so these are essentialy the same.
-    // TODO: So, to download more than one book, I'll need to have a download queue?
-    // Subscribe to all events for a given content id or request id
-    Observable<DownloadEvent> events(String contentId / request id)
-
-    */
-
-  }
 
 
   @Override

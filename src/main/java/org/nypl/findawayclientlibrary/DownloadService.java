@@ -16,6 +16,7 @@ import io.audioengine.mobile.AudioEngineException;
 import io.audioengine.mobile.DownloadEngine;
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
+import io.audioengine.mobile.DownloadType;
 
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
@@ -33,11 +34,14 @@ public class DownloadService implements Observer<DownloadEvent> {
   // so can do a search in log msgs for just this class's output
   private static String TAG;
 
+  public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
+
   public static final Integer DOWNLOAD_ERROR = new Integer(-1);
   public static final Integer DOWNLOAD_SUCCESS = new Integer(0);
-  public static final Integer DOWNLOAD_RUNNING = new Integer(1);
-  public static final Integer DOWNLOAD_PAUSED = new Integer(2);
-  public static final Integer DOWNLOAD_STOPPED = new Integer(3);
+  public static final Integer DOWNLOAD_NEEDED = new Integer(1);
+  public static final Integer DOWNLOAD_RUNNING = new Integer(2);
+  public static final Integer DOWNLOAD_PAUSED = new Integer(3);
+  public static final Integer DOWNLOAD_STOPPED = new Integer(4);
 
   private AudioService audioService;
 
@@ -47,7 +51,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // fulfills books
   DownloadEngine downloadEngine = null;
-  //private DownloadRequest downloadRequest;
+  private DownloadRequest downloadRequest;
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -148,6 +152,130 @@ public class DownloadService implements Observer<DownloadEvent> {
 
 
   /* ------------------------------------ DOWNLOAD EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Translate DownloadEngine-specific status flags into ones our app uses.
+   *
+   * @param contentId
+   * @return
+   */
+  public Integer getDownloadStatus(String contentId) {
+    // GIGO
+    if (contentId == null) {
+      return DOWNLOAD_ERROR;
+    }
+
+    try {
+      // TODO:  used to throw ContentNotFoundException.  test that feeding junk contentId doesn't break the new DownloadEngine.
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.NOT_DOWNLOADED)) {
+        return DOWNLOAD_NEEDED;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.QUEUED) || downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
+        return DOWNLOAD_RUNNING;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.PAUSED)) {
+        return DOWNLOAD_PAUSED;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
+        return DOWNLOAD_SUCCESS;
+      }
+    } catch (Exception e) {
+      // was our contentId not recognized?  record the error, and return.
+      LogHelper.e(TAG, e, "DownloadEngine cannot give status for contentId=", contentId);
+    }
+
+    // unrecognized status, something's wrong
+    return DOWNLOAD_ERROR;
+  }
+
+
+  /**
+   * Make a download request, and ask the Findaway download engine to fulfill it.
+   * Will download the entire book, starting with the chapter specified, skipping any
+   * chapters that are already downloaded.  Will wrap to also download the beginning of the book,
+   * if needed.  So, if pass in chapter 5, then will download chapters 5 - end, and then
+   * download chapters 1-4.
+   *
+   * NOTE: Audio files are downloaded and stored under the application's standard internal files directory. This directory is deleted when the application is removed.
+   *
+   * NOTE:  As long as we use the DownloadEngine to download, queue, delete, etc., the Engine will have stored knowledge
+   * of the current state in the findaway internal database.  So, if I use the engine to delete, it will change the status to “NOT_DOWNLOADED”
+   * which I can check for and re-download later.
+   *
+   * TODO:  Test how to request downloads for 2different books (may need to make my own queue).
+   *
+   * @param contentId  the catalog book id
+   * @param contentId  id of the license to play book (what was checked out to patron)
+   * @param chapter  the chapter to start download at
+   * @param part  the more specific chapter part to start download at
+   */
+  public Integer downloadAudio(String contentId, String licenseId, Integer chapter, Integer part) {
+    if (part == null) {
+      // most of the time, we don't need to get granular.  start download at part==0, and auto-proceed from there.
+      part = CHAPTER_PART_DEFAULT;
+    }
+
+    if ((contentId == null) || (licenseId == null) || (chapter == null)) {
+      LogHelper.e(TAG, "DownloadService cannot build download request for (contentId, licenseId, chapter)", contentId, licenseId, chapter);
+      return DOWNLOAD_ERROR;
+    }
+
+    // NOTE:  DownloadType.TO_END gets book from specified chapter to the end of the book.
+    // DownloadType.TO_END_WRAP gets from specified chapter to the end of the book, then wraps around and
+    // gets all the beginning chapters, too.
+    // DownloadType.SINGLE gets just that chapter.
+    // The system does skip any chapters that are already downloaded.  So, if we need to re-download a chapter,
+    // we'd have to delete it first then call download.
+
+    LogHelper.d(TAG, "before building downloadRequest, part=" + part + ", chapter=" + chapter);
+    // NOTE:  If you start with the first chapter in your request the DownloadEngine will skip any chapters that are already downloaded.
+    downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(licenseId).type(DownloadType.TO_END_WRAP).build();
+
+    try {
+      this.getDownloadEngine().download(downloadRequest);
+      LogHelper.d(TAG, "after downloadEngine.download \n\n\n");
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error getting download engine: " + e.getMessage());
+      return DOWNLOAD_ERROR;
+    }
+
+    return DOWNLOAD_RUNNING;
+  }
+
+
+  deleteDownload() {
+    // To cancel the download for the supplied content, removing any existing progress.  similarly, cancelAll().
+    void delete(DownloadRequest request);
+  }
+
+  cancelDownload() {
+  // To cancel the download for the supplied content, removing any existing progress.  similarly, cancelAll().
+  void cancel(DownloadRequest request);
+  }
+
+
+  pauseDownload() {
+
+    // To pause the download for the supplied content keeping existing progress.  pauseAll() to pause all requests
+    void pause(DownloadRequest request);
+  }
+
+  getDownloadProgress() {
+    // Get the download progress of a book as a percentage from 0 to 100
+    Observable<Integer> getProgress(String contentId) throws ContentNotFoundException
+
+  }
+
+  resumeDownload(String contentId) {
+
+    // To get all DownloadRequests:
+  List<DownloadRequest> downloadRequests()
+  }
+
+
   @Override
   public void onCompleted() {
     // ignore
