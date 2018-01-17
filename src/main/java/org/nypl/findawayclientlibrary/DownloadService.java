@@ -1,18 +1,21 @@
 package org.nypl.findawayclientlibrary;
 
 import java.io.File;
+import java.util.List;
 
 import android.content.Context;
 import android.os.Environment;
-import android.widget.Toast;
+//import android.widget.Toast;
 
-import io.audioengine.mobile.DownloadStatus;
 import rx.Observer;
+import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 import io.audioengine.mobile.AudioEngineException;
+import io.audioengine.mobile.DeleteRequest;
+import io.audioengine.mobile.DownloadStatus;
 import io.audioengine.mobile.DownloadEngine;
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
@@ -42,6 +45,8 @@ public class DownloadService implements Observer<DownloadEvent> {
   public static final Integer DOWNLOAD_RUNNING = new Integer(2);
   public static final Integer DOWNLOAD_PAUSED = new Integer(3);
   public static final Integer DOWNLOAD_STOPPED = new Integer(4);
+  public static final Integer DOWNLOAD_CANCELED = new Integer(5);
+  public static final Integer DELETE_REQUESTED = new Integer(6);
 
   private AudioService audioService;
 
@@ -51,7 +56,8 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // fulfills books
   DownloadEngine downloadEngine = null;
-  private DownloadRequest downloadRequest;
+  //private DownloadRequest downloadRequest;
+  //private DeleteRequest deleteRequest;
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -205,6 +211,9 @@ public class DownloadService implements Observer<DownloadEvent> {
    * of the current state in the findaway internal database.  So, if I use the engine to delete, it will change the status to “NOT_DOWNLOADED”
    * which I can check for and re-download later.
    *
+   * NOTE:  Call getDownloadEngine().getProgress(contentId) to get the download progress
+   * of a book as a percentage from 0 to 100.  Or use the download event system.
+   *
    * TODO:  Test how to request downloads for 2different books (may need to make my own queue).
    *
    * @param contentId  the catalog book id
@@ -232,7 +241,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
     LogHelper.d(TAG, "before building downloadRequest, part=" + part + ", chapter=" + chapter);
     // NOTE:  If you start with the first chapter in your request the DownloadEngine will skip any chapters that are already downloaded.
-    downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(licenseId).type(DownloadType.TO_END_WRAP).build();
+    DownloadRequest downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(licenseId).type(DownloadType.TO_END_WRAP).build();
 
     try {
       this.getDownloadEngine().download(downloadRequest);
@@ -246,33 +255,129 @@ public class DownloadService implements Observer<DownloadEvent> {
   }
 
 
-  deleteDownload() {
-    // To cancel the download for the supplied content, removing any existing progress.  similarly, cancelAll().
-    void delete(DownloadRequest request);
+  /**
+   * Delete all content previously downloaded for this book.
+   * TODO: untested
+   *
+   * @param contentId  book to delete
+   * @return
+   */
+  public Integer deleteDownload(String contentId) {
+    DeleteRequest deleteRequest = DeleteRequest.builder().contentId(contentId).build();
+
+    try {
+      this.getDownloadEngine().delete(deleteRequest);
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error deleting a download: " + e.getMessage());
+      return DOWNLOAD_ERROR;
+    }
+
+    return DELETE_REQUESTED;
   }
 
-  cancelDownload() {
-  // To cancel the download for the supplied content, removing any existing progress.  similarly, cancelAll().
-  void cancel(DownloadRequest request);
-  }
 
-
-  pauseDownload() {
-
-    // To pause the download for the supplied content keeping existing progress.  pauseAll() to pause all requests
-    void pause(DownloadRequest request);
-  }
-
-  getDownloadProgress() {
-    // Get the download progress of a book as a percentage from 0 to 100
-    Observable<Integer> getProgress(String contentId) throws ContentNotFoundException
-
-  }
-
-  resumeDownload(String contentId) {
+  /**
+   * Go through all download requests currently on the engine, and
+   * return those whose contentId matches the one passed in.
+   *
+   * @param contentId
+   * @return
+   */
+  public List<DownloadRequest> findDownloadRequests(String contentId) {
+    List<DownloadRequest> foundRequests = null;
+    if (contentId == null) {
+      return foundRequests;
+    }
 
     // To get all DownloadRequests:
-  List<DownloadRequest> downloadRequests()
+    List<DownloadRequest> requests = this.getDownloadEngine().downloadRequests();
+    for (DownloadRequest request : requests) {
+      if (((DownloadRequest) request).contentId().equals(contentId)) {
+        foundRequests.add(request);
+      }
+    }
+
+    return foundRequests;
+  }
+
+
+  /**
+   * Cancel the download for the supplied content, removing any existing progress.
+   * TODO: untested
+   * @param contentId  book to cancel
+   * @return
+   */
+  public Integer cancelDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_CANCELED;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().cancel(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error canceling a download request: " + e.getMessage());
+        return DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_CANCELED;
+  }
+
+
+  /**
+   * Pause a download request, keeping existing progress (perhaps until we get on WiFi).
+   *
+   * TODO: untested
+   * @param contentId  book to pause download of
+   * @return
+   */
+  public Integer pauseDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_PAUSED;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().pause(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error pausing a download request: " + e.getMessage());
+        return DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_PAUSED;
+  }
+
+
+  /**
+   * Resume a paused download request, keeping existing progress.
+   *
+   * TODO: untested
+   * @param contentId  book to download
+   * @return
+   */
+  public Integer resumeDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_ERROR;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().download(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error resuming a download request: " + e.getMessage());
+        return DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_RUNNING;
   }
 
 

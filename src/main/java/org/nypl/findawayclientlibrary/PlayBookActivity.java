@@ -12,8 +12,6 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 
-//import android.util.Log;
-
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -24,13 +22,7 @@ import android.widget.Toast;
 
 import io.audioengine.mobile.PlayRequest;
 
-import io.audioengine.mobile.DownloadEvent;
-import io.audioengine.mobile.DownloadStatus;
-
-//import io.audioengine.mobile.DownloadRequest;
-//import io.audioengine.mobile.DownloadType;
-
-import rx.Observer;
+//import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -38,7 +30,6 @@ import rx.schedulers.Schedulers;
 // TODO: infuture branch, separate LogHelper out so can call on it from both findaway and rbdigital libraries
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
-// talks to the findaway sdk for us
 
 
 /**
@@ -130,8 +121,6 @@ import org.nypl.findawayclientlibrary.util.LogHelper;
  * currently have an easy-to-check code.  The session expiring could probably be found in the error message.  Since it's a rare event, it'd
  * be OK to resolve all major errors by obtaining a new session key and re-trying the download.
  */
-//public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
-//        View.OnClickListener, View.OnLongClickListener, Observer<AudioEngineEvent>, SeekBar.OnSeekBarChangeListener {
 public class PlayBookActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
           View.OnClickListener, View.OnLongClickListener, SeekBar.OnSeekBarChangeListener {
   // so can do a search in log msgs for just this class's output
@@ -142,15 +131,6 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   PlayBookFragment playBookFragment = null;
 
-  // the one engine to control them all
-  //private static AudioEngine audioEngine = null;
-
-  // fulfills books
-  //DownloadEngine downloadEngine = null;
-  //private DownloadRequest downloadRequest;
-
-  // plays drm-ed audio
-  //private PlaybackEngine playbackEngine;
   private PlayRequest playRequest;
 
   // follows all download engine events
@@ -201,8 +181,11 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   ActionBarDrawerToggle actionBarDrawerToggle;
   NavigationView tocNavigationView;
 
+  // holds the one engine to control them all
   private AudioService audioService = new AudioService(APP_TAG, sessionIdReal1);
+  // plays drm-ed audio
   private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService, this);
+  // fulfills books
   private DownloadService downloadService = new DownloadService(APP_TAG, audioService, this);
 
 
@@ -367,19 +350,20 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     // Check to see all the book files have successfully downloaded.
     Integer downloadStatus = downloadService.getDownloadStatus(contentId);
     // If not, ask the DownloadService to either start or resume the download.
-    if (downloadStatus.equals(DownloadService.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_NEEDED) {
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_NEEDED)) {
       // ask to start the download
       downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
     }
 
-    if (downloadStatus.equals(DownloadService.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_PAUSED) {
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_PAUSED)) {
       // TODO:  do not see a "resume" method in the sdk.  for now, will form a new download request.
-      // test that, if I send in multiple requests with same info, it's equivalent to asking to resume the download
-      downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
+      // Test that, if I send in multiple requests with same info, it's equivalent to asking to resume the download
+      // Test that resuming after a stop works, and what happens if app shuts down and is restored.
+      downloadService.resumeDownload(contentId);
     }
 
     // TODO: bring back, referencing download service instead of this
-    //eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
+    eventsSubscription = playbackService.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this);
   }
 
 
@@ -623,29 +607,6 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   @Override
   public void onClick(View view) {
-    // TODO: the download should start automatically, when needed
-/*
-    if (view.getId() == R.id.download_button) {
-
-      Button downloadButton = (Button) view;
-
-      if (downloadButton.getText().equals(getString(R.string.download))) {
-        downloadAudio();
-
-      } else if (downloadButton.getText().equals(getString(R.string.pause))) {
-
-        playbackService.getDownloadEngine().pause(downloadRequest);
-
-      } else if (downloadButton.getText().equals(getString(R.string.resume))) {
-
-        playbackService.getDownloadEngine().download(downloadRequest);
-
-      } else if (downloadButton.getText().equals(getString(R.string.delete))) {
-
-        playbackService.getDownloadEngine().delete(DeleteRequest.builder().contentId(contentId).build());
-      }
-    }
-*/
 
     if (view.getId() == R.id.play_pause_button && view.getTag().equals(getResources().getString(R.string.play))) {
       LogHelper.d(TAG, "playback PLAY button clicked");
@@ -731,19 +692,6 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
   @Override
   public boolean onLongClick(View view) {
-    /* TODO
-    if (view.getId() == R.id.download_button) {
-
-      Button downloadButton = (Button) view;
-
-      if (downloadButton.getText().equals(getString(R.string.pause))) {
-
-        playbackService.getDownloadEngine().cancel(downloadRequest);
-
-        return true;
-      }
-    }
-  */
     return false;
   }
 
