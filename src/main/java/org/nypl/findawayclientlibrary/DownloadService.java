@@ -56,8 +56,15 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // fulfills books
   DownloadEngine downloadEngine = null;
-  //private DownloadRequest downloadRequest;
-  //private DeleteRequest deleteRequest;
+
+  // local var to store subscription to "all events" from the DownloadEngine
+  Subscription eventsSubscriptionAll = null;
+
+  // local var to store subscription to events that track progress from the DownloadEngine
+  Subscription eventsSubscriptionProgress = null;
+
+  // local var to store subscription to events that track status changes from the DownloadEngine
+  Subscription eventsSubscriptionStatus = null;
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -101,11 +108,33 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   /**
    * Subscribe to a stream of _all_ download events for the supplied content id.
+   * Keep the record of the subscription, in case will be asked to unsubscribe.
+   *
+   * NOTE: Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
    * @return
    */
   public Subscription subscribeDownloadEventsAll(Observer<DownloadEvent> observer, String contentId) {
-    Subscription eventsSubscription = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-    return eventsSubscription;
+    // reset
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+
+    eventsSubscriptionAll = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+
+    return eventsSubscriptionAll;
+  }
+
+
+  /**
+   * If there is a subscription to "all-type" download events, then unsubscribe it.
+   *
+   * @return
+   */
+  public Subscription unsubscribeDownloadEventsAll() {
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+    return eventsSubscriptionAll;
   }
 
 
@@ -114,16 +143,19 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public Subscription subscribeDownloadEventsProgress(Observer<Integer> observer, String contentId) {
-    Subscription eventsSubscription = null;
+    // reset
+    if (eventsSubscriptionProgress != null && !eventsSubscriptionProgress.isUnsubscribed()) {
+      eventsSubscriptionProgress.unsubscribe();
+    }
 
     // if we were given an outside observer to let listen to download progress
     if (observer != null) {
-      eventsSubscription = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-      return eventsSubscription;
+      eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+      return eventsSubscriptionProgress;
     }
 
     // make our own observer
-    this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
+    eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
       @Override
       public void onCompleted() {
         LogHelper.d(TAG, "Initial download progress complete.");
@@ -142,7 +174,7 @@ public class DownloadService implements Observer<DownloadEvent> {
       }
     }); //downloadEngine.progress.subscribe
 
-    return eventsSubscription;
+    return eventsSubscriptionProgress;
   }
 
 
@@ -151,8 +183,13 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public Subscription subscribeDownloadEventsStatusChanges(Observer<DownloadStatus> observer, String contentId) {
-    Subscription eventsSubscription = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-    return eventsSubscription;
+    // reset
+    if (eventsSubscriptionStatus != null && !eventsSubscriptionStatus.isUnsubscribed()) {
+      eventsSubscriptionStatus.unsubscribe();
+    }
+
+    eventsSubscriptionStatus = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    return eventsSubscriptionStatus;
   }
 
 
@@ -381,12 +418,18 @@ public class DownloadService implements Observer<DownloadEvent> {
   }
 
 
+  /**
+   * To satisfy rx.Observer implementation.
+   */
   @Override
   public void onCompleted() {
     // ignore
   }
 
 
+  /**
+   * Handle download events that are errors.
+   */
   @Override
   public void onError(Throwable e) {
     LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
