@@ -44,16 +44,7 @@ public class DownloadService implements Observer<DownloadEvent> {
     DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
     DOWNLOAD_CANCELED, DELETE_REQUESTED
   }
-
-  //public static final Integer DOWNLOAD_ERROR = new Integer(-1);
-  //public static final Integer DOWNLOAD_SUCCESS = new Integer(0);
-  //public static final Integer DOWNLOAD_NEEDED = new Integer(1);
-  //public static final Integer DOWNLOAD_RUNNING = new Integer(2);
-  //public static final Integer DOWNLOAD_PAUSED = new Integer(3);
-  //public static final Integer DOWNLOAD_STOPPED = new Integer(4);
-  //public static final Integer DOWNLOAD_CANCELED = new Integer(5);
-  //public static final Integer DELETE_REQUESTED = new Integer(6);
-
+  
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
@@ -615,37 +606,4 @@ public class DownloadService implements Observer<DownloadEvent> {
 
 
 
-    // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-    // don't think it's related to the download error.
-
-    // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-    // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-    // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-    // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-    // and also the chapter object is all nulled when onNext isError.
-    // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-    // that's thrown from the findaway internal sdk code:
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-    // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-    // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-    // and some nicer stack trace, coming from the findaway sdk:
-    // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      /*
-      01-05 17:50:16.844 9665-9711/org.nypl.audiobooklibrarydemoapp I/System.out: Sending PlayNextRequest to onNext. Observers? true
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/102244/playlists http/1.1
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Type: application/json; charset=UTF-8
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Length: 41
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> END POST
-      01-05 17:50:16.884 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.896 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.971 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- 200 OK https://api.findawayworld.com/v4/audiobooks/102244/playlists (123ms)
-       */
-
-
-  }
+}
