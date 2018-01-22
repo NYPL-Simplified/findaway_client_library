@@ -1,6 +1,7 @@
 package org.nypl.findawayclientlibrary;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.content.Context;
@@ -347,7 +348,7 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public List<DownloadRequest> findDownloadRequests(String contentId) {
-    List<DownloadRequest> foundRequests = null;
+    List<DownloadRequest> foundRequests = new ArrayList<DownloadRequest>();
     if (contentId == null) {
       return foundRequests;
     }
