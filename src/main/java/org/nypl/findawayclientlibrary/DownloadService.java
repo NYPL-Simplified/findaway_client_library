@@ -97,10 +97,10 @@ public class DownloadService implements Observer<DownloadEvent> {
     } catch (AudioEngineException e) {
       // Call to getDownloadEngine will throw an exception if you have not previously
       // called init() on AudioEngine with a valid Context and Session.
-      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
+      LogHelper.e(TAG, e, "Error getting download engine: ", e.getMessage());
       e.printStackTrace();
     } catch (Exception e) {
-      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
+      LogHelper.e(TAG, e, "Error getting download engine: ", e.getMessage());
       e.printStackTrace();
     }
   }
@@ -119,7 +119,13 @@ public class DownloadService implements Observer<DownloadEvent> {
       eventsSubscriptionAll.unsubscribe();
     }
 
-    eventsSubscriptionAll = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    try {
+      eventsSubscriptionAll = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download events: ", e.getMessage());
+    }
 
     return eventsSubscriptionAll;
   }
@@ -150,29 +156,42 @@ public class DownloadService implements Observer<DownloadEvent> {
 
     // if we were given an outside observer to let listen to download progress
     if (observer != null) {
-      eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+      try {
+        eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+      } catch (Exception e) {
+        // null pointer and other exceptions are not expected, but possible
+        // do nothing, we're already unsubscribed.
+        LogHelper.e(TAG, e, "Error subscribing to download progress events with given observer: ", e.getMessage());
+      }
+
       return eventsSubscriptionProgress;
     }
 
     // make our own observer
-    eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
-      @Override
-      public void onCompleted() {
-        LogHelper.d(TAG, "Initial download progress complete.");
-      }
+    try {
+      eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
+        @Override
+        public void onCompleted() {
+          LogHelper.d(TAG, "Initial download progress complete.");
+        }
 
-      @Override
-      public void onError(Throwable e) {
-        LogHelper.d(TAG, "Initial download progress error: ", e.getMessage());
-      }
+        @Override
+        public void onError(Throwable e) {
+          LogHelper.d(TAG, "Initial download progress error: ", e.getMessage());
+        }
 
-      @Override
-      public void onNext(Integer progress) {
-        LogHelper.d(TAG, "Got initial download progress ", progress);
+        @Override
+        public void onNext(Integer progress) {
+          LogHelper.d(TAG, "Got initial download progress ", progress);
 
-        callbackActivity.setDownloadProgress(progress, 0, null);
-      }
-    }); //downloadEngine.progress.subscribe
+          callbackActivity.setDownloadProgress(progress, 0, null);
+        }
+      }); //downloadEngine.progress.subscribe
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download progress events: ", e.getMessage());
+    }
 
     return eventsSubscriptionProgress;
   }
@@ -188,7 +207,14 @@ public class DownloadService implements Observer<DownloadEvent> {
       eventsSubscriptionStatus.unsubscribe();
     }
 
-    eventsSubscriptionStatus = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    try {
+      eventsSubscriptionStatus = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download status events: ", e.getMessage());
+    }
+
     return eventsSubscriptionStatus;
   }
 
