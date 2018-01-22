@@ -67,15 +67,6 @@
         app:layout_constraintGuide_percent="0.85"/>
 
 
-    <!-- LinearLayout
-        android:id="@+id/middle_info_area"
-        android:layout_width="match_parent"
-        android:layout_height="0px"
-        android:layout_weight="2"
-        android:background="@drawable/default_cover_image_gradient_list"
-        android:gravity="center_horizontal"
-        android:orientation="vertical" -->
-
     <View
         android:id="@+id/middle_info_area_background"
         android:layout_width="0dp"
@@ -155,21 +146,37 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/book_author_full_name"/>
 
+    <!-- Contains the book cover image. -->
+    <ImageView
+        android:id="@+id/cover_image"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginTop="8dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/book_cover_image_view"
+        android:minHeight="100dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@id/bottom_seekbar_guideline"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/book_narrator_full_name"/>
+        <!-- android:src="@drawable/toc_dark" -->
+
+
     <ProgressBar
         android:id="@+id/download_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="48dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginBottom="0dp"
         android:max="100"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="100"
+        app:layout_constraintBottom_toTopOf="@id/bottom_seekbar_guideline"
         app:layout_constraintEnd_toStartOf="@+id/right_guideline"
         app:layout_constraintStart_toStartOf="@+id/left_guideline"
-        app:layout_constraintTop_toBottomOf="@+id/book_narrator_full_name"
-        app:layout_constraintVertical_bias="0.137"/>
+        />
+
 
     <TextView
         android:id="@+id/chapter_download_percentage"
@@ -193,22 +200,19 @@
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toEndOf="@+id/download_progress"/>
 
-    <!-- Contains the book cover image. -->
-    <ImageView
-        android:id="@+id/cover_image"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginTop="8dp"
-        android:adjustViewBounds="true"
-        android:contentDescription="@string/book_cover_image_view"
-        android:minHeight="100dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/toc_dark"
-        app:layout_constraintBottom_toTopOf="@id/bottom_seekbar_guideline"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/book_narrator_full_name"/>
+    <ProgressBar
+        android:id="@+id/download_progress_2"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_centerInParent="true"
+        android:indeterminate="false"
+        android:max="100"
+        app:layout_constraintEnd_toStartOf="@+id/right_guideline"
+        app:layout_constraintStart_toStartOf="@+id/left_guideline"
+        app:layout_constraintTop_toBottomOf="@id/download_progress"
+        />
+        <!-- android:progressDrawable="@drawable/progress_bar_circular" / -->
 
 
     <android.support.design.widget.FloatingActionButton
@@ -221,7 +225,7 @@
         android:contentDescription="Pause Download"
         app:layout_constraintBottom_toTopOf="@+id/bottom_seekbar_guideline"
         app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/ic_cloud_download_black_24dp"/>
+        app:srcCompat="@drawable/ic_cloud_download_black_24dp" android:focusable="true"/>
 
 
     <!--/LinearLayout--> <!-- middle_info_area -->
