@@ -1,21 +1,25 @@
 package org.nypl.findawayclientlibrary;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.content.Context;
 import android.os.Environment;
-import android.widget.Toast;
 
-import io.audioengine.mobile.DownloadStatus;
 import rx.Observer;
+import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 import io.audioengine.mobile.AudioEngineException;
+import io.audioengine.mobile.DeleteRequest;
+import io.audioengine.mobile.DownloadStatus;
 import io.audioengine.mobile.DownloadEngine;
 import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
+import io.audioengine.mobile.DownloadType;
 
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
@@ -33,12 +37,14 @@ public class DownloadService implements Observer<DownloadEvent> {
   // so can do a search in log msgs for just this class's output
   private static String TAG;
 
-  public static final Integer DOWNLOAD_ERROR = new Integer(-1);
-  public static final Integer DOWNLOAD_SUCCESS = new Integer(0);
-  public static final Integer DOWNLOAD_RUNNING = new Integer(1);
-  public static final Integer DOWNLOAD_PAUSED = new Integer(2);
-  public static final Integer DOWNLOAD_STOPPED = new Integer(3);
+  public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
 
+  public static enum DOWNLOAD_STATUS {
+    DOWNLOAD_ERROR, DOWNLOAD_SUCCESS,
+    DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
+    DOWNLOAD_CANCELED, DELETE_REQUESTED
+  }
+  
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
@@ -47,7 +53,15 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // fulfills books
   DownloadEngine downloadEngine = null;
-  //private DownloadRequest downloadRequest;
+
+  // local var to store subscription to "all events" from the DownloadEngine
+  Subscription eventsSubscriptionAll = null;
+
+  // local var to store subscription to events that track progress from the DownloadEngine
+  Subscription eventsSubscriptionProgress = null;
+
+  // local var to store subscription to events that track status changes from the DownloadEngine
+  Subscription eventsSubscriptionStatus = null;
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -80,10 +94,10 @@ public class DownloadService implements Observer<DownloadEvent> {
     } catch (AudioEngineException e) {
       // Call to getDownloadEngine will throw an exception if you have not previously
       // called init() on AudioEngine with a valid Context and Session.
-      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
+      LogHelper.e(TAG, e, "Error getting download engine: ", e.getMessage());
       e.printStackTrace();
     } catch (Exception e) {
-      LogHelper.e(TAG, "Error getting download engine: " + e.getMessage());
+      LogHelper.e(TAG, e, "Error getting download engine: ", e.getMessage());
       e.printStackTrace();
     }
   }
@@ -91,11 +105,39 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   /**
    * Subscribe to a stream of _all_ download events for the supplied content id.
+   * Keep the record of the subscription, in case will be asked to unsubscribe.
+   *
+   * NOTE: Download events are described here:  http://developer.audioengine.io/sdk/android/v7/download-engine .
    * @return
    */
   public Subscription subscribeDownloadEventsAll(Observer<DownloadEvent> observer, String contentId) {
-    Subscription eventsSubscription = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-    return eventsSubscription;
+    // reset
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+
+    try {
+      eventsSubscriptionAll = this.getDownloadEngine().events(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download events: ", e.getMessage());
+    }
+
+    return eventsSubscriptionAll;
+  }
+
+
+  /**
+   * If there is a subscription to "all-type" download events, then unsubscribe it.
+   *
+   * @return
+   */
+  public Subscription unsubscribeDownloadEventsAll() {
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+    return eventsSubscriptionAll;
   }
 
 
@@ -104,35 +146,51 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public Subscription subscribeDownloadEventsProgress(Observer<Integer> observer, String contentId) {
-    Subscription eventsSubscription = null;
+    // reset
+    if (eventsSubscriptionProgress != null && !eventsSubscriptionProgress.isUnsubscribed()) {
+      eventsSubscriptionProgress.unsubscribe();
+    }
 
     // if we were given an outside observer to let listen to download progress
     if (observer != null) {
-      eventsSubscription = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-      return eventsSubscription;
+      try {
+        eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+      } catch (Exception e) {
+        // null pointer and other exceptions are not expected, but possible
+        // do nothing, we're already unsubscribed.
+        LogHelper.e(TAG, e, "Error subscribing to download progress events with given observer: ", e.getMessage());
+      }
+
+      return eventsSubscriptionProgress;
     }
 
     // make our own observer
-    this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
-      @Override
-      public void onCompleted() {
-        LogHelper.d(TAG, "Initial download progress complete.");
-      }
+    try {
+      eventsSubscriptionProgress = this.getDownloadEngine().getProgress(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).take(1).subscribe(new Observer<Integer>() {
+        @Override
+        public void onCompleted() {
+          LogHelper.d(TAG, "Initial download progress complete.");
+        }
 
-      @Override
-      public void onError(Throwable e) {
-        LogHelper.d(TAG, "Initial download progress error: ", e.getMessage());
-      }
+        @Override
+        public void onError(Throwable e) {
+          LogHelper.d(TAG, "Initial download progress error: ", e.getMessage());
+        }
 
-      @Override
-      public void onNext(Integer progress) {
-        LogHelper.d(TAG, "Got initial download progress ", progress);
+        @Override
+        public void onNext(Integer progress) {
+          LogHelper.d(TAG, "Got initial download progress ", progress);
 
-        callbackActivity.setDownloadProgress(progress, 0, null);
-      }
-    }); //downloadEngine.progress.subscribe
+          callbackActivity.setDownloadProgress(progress, 0, null);
+        }
+      }); //downloadEngine.progress.subscribe
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download progress events: ", e.getMessage());
+    }
 
-    return eventsSubscription;
+    return eventsSubscriptionProgress;
   }
 
 
@@ -141,19 +199,260 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public Subscription subscribeDownloadEventsStatusChanges(Observer<DownloadStatus> observer, String contentId) {
-    Subscription eventsSubscription = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
-    return eventsSubscription;
+    // reset
+    if (eventsSubscriptionStatus != null && !eventsSubscriptionStatus.isUnsubscribed()) {
+      eventsSubscriptionStatus.unsubscribe();
+    }
+
+    try {
+      eventsSubscriptionStatus = this.getDownloadEngine().getStatus(contentId).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+    } catch (Exception e) {
+      // null pointer and other exceptions are not expected, but possible
+      // do nothing, we're already unsubscribed.
+      LogHelper.e(TAG, e, "Error subscribing to download status events: ", e.getMessage());
+    }
+
+    return eventsSubscriptionStatus;
   }
 
 
 
   /* ------------------------------------ DOWNLOAD EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Translate DownloadEngine-specific status flags into ones our app uses.
+   *
+   * @param contentId
+   * @return
+   */
+  public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
+    // GIGO
+    if (contentId == null) {
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+    }
+
+    try {
+      // TODO:  used to throw ContentNotFoundException.  test that feeding junk contentId doesn't break the new DownloadEngine.
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.NOT_DOWNLOADED)) {
+        return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.QUEUED) || downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
+        return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.PAUSED)) {
+        return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
+      }
+
+      if (downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
+        return DOWNLOAD_STATUS.DOWNLOAD_SUCCESS;
+      }
+    } catch (Exception e) {
+      // was our contentId not recognized?  record the error, and return.
+      LogHelper.e(TAG, e, "DownloadEngine cannot give status for contentId=", contentId);
+    }
+
+    // unrecognized status, something's wrong
+    return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+  }
+
+
+  /**
+   * Make a download request, and ask the Findaway download engine to fulfill it.
+   * Will download the entire book, starting with the chapter specified, skipping any
+   * chapters that are already downloaded.  Will wrap to also download the beginning of the book,
+   * if needed.  So, if pass in chapter 5, then will download chapters 5 - end, and then
+   * download chapters 1-4.
+   *
+   * NOTE: Audio files are downloaded and stored under the application's standard internal files directory. This directory is deleted when the application is removed.
+   *
+   * NOTE:  As long as we use the DownloadEngine to download, queue, delete, etc., the Engine will have stored knowledge
+   * of the current state in the findaway internal database.  So, if I use the engine to delete, it will change the status to “NOT_DOWNLOADED”
+   * which I can check for and re-download later.
+   *
+   * NOTE:  Call getDownloadEngine().getProgress(contentId) to get the download progress
+   * of a book as a percentage from 0 to 100.  Or use the download event system.
+   *
+   * TODO:  Test how to request downloads for 2different books (may need to make my own queue).
+   *
+   * @param contentId  the catalog book id
+   * @param contentId  id of the license to play book (what was checked out to patron)
+   * @param chapter  the chapter to start download at
+   * @param part  the more specific chapter part to start download at
+   */
+  public DOWNLOAD_STATUS downloadAudio(String contentId, String licenseId, Integer chapter, Integer part) {
+    if (part == null) {
+      // most of the time, we don't need to get granular.  start download at part==0, and auto-proceed from there.
+      part = CHAPTER_PART_DEFAULT;
+    }
+
+    if ((contentId == null) || (licenseId == null) || (chapter == null)) {
+      LogHelper.e(TAG, "DownloadService cannot build download request for (contentId, licenseId, chapter)", contentId, licenseId, chapter);
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+    }
+
+    // NOTE:  DownloadType.TO_END gets book from specified chapter to the end of the book.
+    // DownloadType.TO_END_WRAP gets from specified chapter to the end of the book, then wraps around and
+    // gets all the beginning chapters, too.
+    // DownloadType.SINGLE gets just that chapter.
+    // The system does skip any chapters that are already downloaded.  So, if we need to re-download a chapter,
+    // we'd have to delete it first then call download.
+
+    LogHelper.d(TAG, "before building downloadRequest, part=" + part + ", chapter=" + chapter);
+    // NOTE:  If you start with the first chapter in your request the DownloadEngine will skip any chapters that are already downloaded.
+    DownloadRequest downloadRequest = DownloadRequest.builder().contentId(contentId).part(part).chapter(chapter).licenseId(licenseId).type(DownloadType.TO_END_WRAP).build();
+
+    try {
+      this.getDownloadEngine().download(downloadRequest);
+      LogHelper.d(TAG, "after downloadEngine.download \n\n\n");
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error getting download engine: " + e.getMessage());
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+    }
+
+    return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
+  }
+
+
+  /**
+   * Delete all content previously downloaded for this book.
+   * TODO: untested
+   *
+   * @param contentId  book to delete
+   * @return
+   */
+  public DOWNLOAD_STATUS deleteDownload(String contentId) {
+    DeleteRequest deleteRequest = DeleteRequest.builder().contentId(contentId).build();
+
+    try {
+      this.getDownloadEngine().delete(deleteRequest);
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error deleting a download: " + e.getMessage());
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+    }
+
+    return DOWNLOAD_STATUS.DELETE_REQUESTED;
+  }
+
+
+  /**
+   * Go through all download requests currently on the engine, and
+   * return those whose contentId matches the one passed in.
+   *
+   * @param contentId
+   * @return
+   */
+  public List<DownloadRequest> findDownloadRequests(String contentId) {
+    List<DownloadRequest> foundRequests = new ArrayList<DownloadRequest>();
+    if (contentId == null) {
+      return foundRequests;
+    }
+
+    // To get all DownloadRequests:
+    List<DownloadRequest> requests = this.getDownloadEngine().downloadRequests();
+    for (DownloadRequest request : requests) {
+      if (((DownloadRequest) request).contentId().equals(contentId)) {
+        foundRequests.add(request);
+      }
+    }
+
+    return foundRequests;
+  }
+
+
+  /**
+   * Cancel the download for the supplied content, removing any existing progress.
+   * TODO: untested
+   * @param contentId  book to cancel
+   * @return
+   */
+  public DOWNLOAD_STATUS cancelDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_STATUS.DOWNLOAD_CANCELED;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().cancel(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error canceling a download request: " + e.getMessage());
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_STATUS.DOWNLOAD_CANCELED;
+  }
+
+
+  /**
+   * Pause a download request, keeping existing progress (perhaps until we get on WiFi).
+   *
+   * TODO: untested
+   * @param contentId  book to pause download of
+   * @return
+   */
+  public DOWNLOAD_STATUS pauseDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().pause(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error pausing a download request: ", e.getMessage());
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
+  }
+
+
+  /**
+   * Resume a paused download request, keeping existing progress.
+   *
+   * TODO: untested
+   * @param contentId  book to download
+   * @return
+   */
+  public DOWNLOAD_STATUS resumeDownload(String contentId) {
+    List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
+    if ((foundRequests == null) || (foundRequests.size() == 0)) {
+      // nothing to do here
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+    }
+
+    for (DownloadRequest request : foundRequests) {
+      try {
+        this.getDownloadEngine().download(request);
+      } catch (Exception e) {
+        LogHelper.e(TAG, e, "Error resuming a download request: ", e.getMessage());
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
+      }
+    }
+
+    return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
+  }
+
+
+  /**
+   * To satisfy rx.Observer implementation.
+   */
   @Override
   public void onCompleted() {
     // ignore
   }
 
 
+  /**
+   * Handle download events that are errors.
+   */
   @Override
   public void onError(Throwable e) {
     LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
@@ -264,34 +563,34 @@ public class DownloadService implements Observer<DownloadEvent> {
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
         // TODO: make sure all string messages are coming in from R.string
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_RUNNING);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_RUNNING);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadPaused));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_PAUSED);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_PAUSED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
 
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_SUCCESS);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
         callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
@@ -307,37 +606,4 @@ public class DownloadService implements Observer<DownloadEvent> {
 
 
 
-    // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-    // don't think it's related to the download error.
-
-    // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-    // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-    // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-    // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-    // and also the chapter object is all nulled when onNext isError.
-    // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-    // that's thrown from the findaway internal sdk code:
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-    // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-    // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-    // and some nicer stack trace, coming from the findaway sdk:
-    // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      /*
-      01-05 17:50:16.844 9665-9711/org.nypl.audiobooklibrarydemoapp I/System.out: Sending PlayNextRequest to onNext. Observers? true
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/102244/playlists http/1.1
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Type: application/json; charset=UTF-8
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Length: 41
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> END POST
-      01-05 17:50:16.884 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.896 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.971 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- 200 OK https://api.findawayworld.com/v4/audiobooks/102244/playlists (123ms)
-       */
-
-
-  }
+}

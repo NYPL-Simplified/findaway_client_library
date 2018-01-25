@@ -1,17 +1,17 @@
 package org.nypl.findawayclientlibrary;
 
-//import io.audioengine.mobile.AudioEngine;
-import android.widget.Toast;
+//import android.widget.Toast;
+
+import rx.android.schedulers.AndroidSchedulers;
+import rx.Observer;
+import rx.schedulers.Schedulers;
+import rx.Subscription;
 
 import io.audioengine.mobile.AudioEngineException;
 //import io.audioengine.mobile.config.LogLevel;
-
-//import io.audioengine.mobile.persistence.DownloadEngine;
-//import io.audioengine.mobile.persistence.DownloadRequest;
-
 import io.audioengine.mobile.PlaybackEngine;
 import io.audioengine.mobile.PlaybackEvent;
-import rx.Observer;
+import io.audioengine.mobile.PlayRequest;
 
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
@@ -29,6 +29,11 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   // so can do a search in log msgs for just this class's output
   private static String TAG;
 
+  public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
+
+  public static final Integer PLAY_ERROR = new Integer(-1);
+  public static final Integer PLAY_SUCCESS = new Integer(0);
+
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
@@ -37,6 +42,9 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
   // plays drm-ed audio
   private PlaybackEngine playbackEngine = null;
+  private PlayRequest playRequest;
+
+  Subscription eventsSubscriptionAll = null;
 
   // tracks where the audio playback should be, as far as the seek bar knows
   int seekTo;
@@ -120,7 +128,66 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   }
 
 
+  /**
+   * Subscribe to a stream of _all_ playback events without discriminating on content id.
+   * Keep the record of the subscription, in case will be asked to unsubscribe.
+   *
+   * @return
+   */
+  public Subscription subscribePlayEventsAll(Observer<PlaybackEvent> observer) {
+    // reset
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+
+    eventsSubscriptionAll = this.getPlaybackEngine().events().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(observer);
+
+    return eventsSubscriptionAll;
+  }
+
+
+  /**
+   * If there is a subscription to "all-type" play events, then unsubscribe it.
+   *
+   * @return
+   */
+  public Subscription unsubscribePlayEventsAll() {
+    if (eventsSubscriptionAll != null && !eventsSubscriptionAll.isUnsubscribed()) {
+      eventsSubscriptionAll.unsubscribe();
+    }
+    return eventsSubscriptionAll;
+  }
+
+
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
+
+  public Integer playAudio(String contentId, String licenseId, Integer chapter, Integer part) {
+
+    if (part == null) {
+      // most of the time, we don't need to get granular.  start download at part==0, and auto-proceed from there.
+      // TODO:  untested assumption
+      part = CHAPTER_PART_DEFAULT;
+    }
+
+    if ((contentId == null) || (licenseId == null) || (chapter == null)) {
+      LogHelper.e(TAG, "PlaybackService cannot build play request for (contentId, licenseId, chapter)", contentId, licenseId, chapter);
+      return PLAY_ERROR;
+    }
+
+    playRequest = PlayRequest.builder().contentId(contentId).part(part).chapter(chapter).license(licenseId).
+            position((int) this.getLastPlaybackPosition()).build();
+
+    try {
+      this.getPlaybackEngine().play(playRequest);
+      LogHelper.d(TAG, "after downloadEngine.download \n\n\n");
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error getting download engine: " + e.getMessage());
+      return PLAY_ERROR;
+    }
+
+    return PLAY_SUCCESS;
+  }
+
 
   /**
    * To satisfy rx.Observer implementation.
