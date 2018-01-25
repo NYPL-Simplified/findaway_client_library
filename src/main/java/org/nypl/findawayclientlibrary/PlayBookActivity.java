@@ -80,6 +80,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   String sessionIdReal4 = "720ba35d-8920-4621-9749-17f7ebe56316";
   String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
   String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
+  String sessionIdReal7 = "8718066c-3aa9-4353-803c-f7dd3c829e40";
+
 
   // Kevin's test value
   // String contentId = "83380";
@@ -89,9 +91,10 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   // Kevin's test value
   //String license = "5744a7b7b692b13bf8c06865";
   // Darya's value keyed to licenseId of the book NYPL bought through Bibliotheca
-  //String license = "57db1411afde9f3e7a3c041b";
   //String license = "57ff8f27afde9f3cea3c041b";
-  String license = "57db1411afde9f3e7a3c041b";
+  //String license = "57db1411afde9f3e7a3c041b";
+  String license = "580e7da175435e471d2e042a";
+
 
   // TODO: instead of radial gradient, do a gentle square bottom -> top gradient, and make the colors gray-blue.
 
@@ -106,7 +109,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   NavigationView tocNavigationView;
 
   // holds the one engine to control them all
-  private AudioService audioService = new AudioService(APP_TAG, sessionIdReal1);
+  private AudioService audioService = new AudioService(APP_TAG, sessionIdReal7);
   // plays drm-ed audio
   private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService, this);
   // fulfills books
@@ -263,6 +266,9 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     // a stream of _all_ download events for the supplied content id
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
     downloadService.subscribeDownloadEventsAll(downloadService, contentId);
+
+    // TODO: deleting for debugging the progress bar, remove when done design
+    downloadService.deleteDownload(contentId);
 
     // We know what book this activity is to be playing.  Does this book need any downloading?
     // Check to see all the book files have successfully downloaded.
@@ -687,6 +693,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   /**
    * Update the download progress bar, and any other download-associated UI elements
    * to reflect current download status (passed in).
+   * TODO: make sure passing non-null enum for status from DownloadService line 187.
    *
    * @param primaryProgress
    * @param secondaryProgress

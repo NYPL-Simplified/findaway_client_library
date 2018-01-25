@@ -229,6 +229,11 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public Integer getDownloadStatus(String contentId) {
+    // TODO: remove the hardcoding to always return that needs to download (for debugging right now)
+    if (true) {
+      return DOWNLOAD_NEEDED;
+    }
+
     // GIGO
     if (contentId == null) {
       return DOWNLOAD_ERROR;
@@ -566,34 +571,35 @@ public class DownloadService implements Observer<DownloadEvent> {
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
         // TODO: make sure all string messages are coming in from R.string
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_RUNNING);
+        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_RUNNING);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadPaused));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_PAUSED);
+        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_PAUSED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
 
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
+        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), 100, DOWNLOAD_RUNNING);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_SUCCESS);
+        //callbackActivity.setDownloadProgress(100, 100, DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
         callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);

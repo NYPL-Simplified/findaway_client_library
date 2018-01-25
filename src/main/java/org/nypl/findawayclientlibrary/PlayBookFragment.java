@@ -5,6 +5,7 @@ import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -52,9 +53,10 @@ public class PlayBookFragment extends BaseFragment {
 
   private ImageView coverImage;
 
-  private Button downloadButton;
+  private FloatingActionButton downloadButton;
   // non-user-interactive, usually used to show download progress
   private ProgressBar downloadProgress;
+  private ProgressBar downloadProgress2;
   private TextView chapterPercentage, contentPercentage;
 
   private TextView currentTime, remainingTime;
@@ -112,8 +114,9 @@ public class PlayBookFragment extends BaseFragment {
     }
 
     // set up the UI elements that will give download info
-    //downloadButton = (Button) fragmentView.findViewById(R.id.download_button);
+    downloadButton = (FloatingActionButton) fragmentView.findViewById(R.id.download_button);
     downloadProgress = (ProgressBar) fragmentView.findViewById(R.id.download_progress);
+    downloadProgress2 = (ProgressBar) fragmentView.findViewById(R.id.download_progress_2);
     chapterPercentage = (TextView) fragmentView.findViewById(R.id.chapter_download_percentage);
     contentPercentage = (TextView) fragmentView.findViewById(R.id.content_download_percentage);
 
@@ -192,12 +195,12 @@ public class PlayBookFragment extends BaseFragment {
     }
 
     if (status.equals(DownloadService.DOWNLOAD_RUNNING)) {
-      downloadButton.setText(getString(R.string.pause));
+      //downloadButton.setText(getString(R.string.pause));
       return;
     }
 
     if (status.equals(DownloadService.DOWNLOAD_PAUSED)) {
-      downloadButton.setText(getString(R.string.resume));
+      //downloadButton.setText(getString(R.string.resume));
       return;
     }
 
@@ -266,15 +269,23 @@ public class PlayBookFragment extends BaseFragment {
 
   /**
    * Update the progress bar to reflect where we are in the downloading.
+   * While both the primary and secondary progress percentages are being passed in,
+   * ignore the secondary, and only update the primary for now.  Updating the chapters
+   * is happening too much and thrashing the UI.  To use the secondaryProgress as per chapter
+   * download indicators, will want to take the UI update onto a separate thread.
    *
-   * @param primaryProgress
-   * @param secondaryProgress
+   * @param primaryProgress Represents percent of total book download.
+   * @param secondaryProgress Represents percent of currently downloading chapter.
    */
   public void redrawDownloadProgress(Integer primaryProgress, Integer secondaryProgress) {
     downloadProgress.setProgress(primaryProgress);
-    downloadProgress.setSecondaryProgress(secondaryProgress);
+    // downloadProgress.setSecondaryProgress(secondaryProgress);
     contentPercentage.setText(getString(R.string.contentPercentage, primaryProgress));
     chapterPercentage.setText(getString(R.string.chapterPercentage, secondaryProgress));
+
+
+    downloadProgress2.setProgress(primaryProgress);
+    //downloadProgress2.setSecondaryProgress(secondaryProgress);
   }
 
 
@@ -333,7 +344,7 @@ public class PlayBookFragment extends BaseFragment {
       // load image as Drawable
       Drawable coverImageDrawable = Drawable.createFromStream(coverImageStream, "Book Cover Image");
       if (coverImageDrawable != null) {
-        coverImage.setImageDrawable(coverImageDrawable);
+        // TODO: bring back  coverImage.setImageDrawable(coverImageDrawable);
 
         coverImageDrawable.getBounds();
       }
@@ -347,7 +358,7 @@ public class PlayBookFragment extends BaseFragment {
           coverImageStream.close();
         } catch (IOException e) {
           // user doesn't need to see this one, only print to log
-          LogHelper.e(TAG, "loadCoverImage() could not close coverImageStream.", e);
+          LogHelper.e(TAG, e, "loadCoverImage() could not close coverImageStream.");
         }
       }
     }
