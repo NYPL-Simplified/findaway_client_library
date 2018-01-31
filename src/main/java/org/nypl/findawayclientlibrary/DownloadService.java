@@ -1,6 +1,7 @@
 package org.nypl.findawayclientlibrary;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.os.Environment;
@@ -38,15 +39,12 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
 
-  public static final Integer DOWNLOAD_ERROR = new Integer(-1);
-  public static final Integer DOWNLOAD_SUCCESS = new Integer(0);
-  public static final Integer DOWNLOAD_NEEDED = new Integer(1);
-  public static final Integer DOWNLOAD_RUNNING = new Integer(2);
-  public static final Integer DOWNLOAD_PAUSED = new Integer(3);
-  public static final Integer DOWNLOAD_STOPPED = new Integer(4);
-  public static final Integer DOWNLOAD_CANCELED = new Integer(5);
-  public static final Integer DELETE_REQUESTED = new Integer(6);
-
+  public static enum DOWNLOAD_STATUS {
+    DOWNLOAD_ERROR, DOWNLOAD_SUCCESS,
+    DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
+    DOWNLOAD_CANCELED, DELETE_REQUESTED
+  }
+  
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
@@ -227,33 +225,33 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param contentId
    * @return
    */
-  public Integer getDownloadStatus(String contentId) {
+  public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
     // TODO: remove the hardcoding to always return that needs to download (for debugging right now)
     if (true) {
-      return DOWNLOAD_NEEDED;
+      return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
     }
 
     // GIGO
     if (contentId == null) {
-      return DOWNLOAD_ERROR;
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
     }
 
     try {
       // TODO:  used to throw ContentNotFoundException.  test that feeding junk contentId doesn't break the new DownloadEngine.
       if (downloadEngine.getStatus(contentId).equals(DownloadStatus.NOT_DOWNLOADED)) {
-        return DOWNLOAD_NEEDED;
+        return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
       }
 
       if (downloadEngine.getStatus(contentId).equals(DownloadStatus.QUEUED) || downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
-        return DOWNLOAD_RUNNING;
+        return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
       }
 
       if (downloadEngine.getStatus(contentId).equals(DownloadStatus.PAUSED)) {
-        return DOWNLOAD_PAUSED;
+        return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
       }
 
       if (downloadEngine.getStatus(contentId).equals(DownloadStatus.DOWNLOADED)) {
-        return DOWNLOAD_SUCCESS;
+        return DOWNLOAD_STATUS.DOWNLOAD_SUCCESS;
       }
     } catch (Exception e) {
       // was our contentId not recognized?  record the error, and return.
@@ -261,7 +259,7 @@ public class DownloadService implements Observer<DownloadEvent> {
     }
 
     // unrecognized status, something's wrong
-    return DOWNLOAD_ERROR;
+    return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
   }
 
 
@@ -288,7 +286,7 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param chapter  the chapter to start download at
    * @param part  the more specific chapter part to start download at
    */
-  public Integer downloadAudio(String contentId, String licenseId, Integer chapter, Integer part) {
+  public DOWNLOAD_STATUS downloadAudio(String contentId, String licenseId, Integer chapter, Integer part) {
     if (part == null) {
       // most of the time, we don't need to get granular.  start download at part==0, and auto-proceed from there.
       part = CHAPTER_PART_DEFAULT;
@@ -296,7 +294,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
     if ((contentId == null) || (licenseId == null) || (chapter == null)) {
       LogHelper.e(TAG, "DownloadService cannot build download request for (contentId, licenseId, chapter)", contentId, licenseId, chapter);
-      return DOWNLOAD_ERROR;
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
     }
 
     // NOTE:  DownloadType.TO_END gets book from specified chapter to the end of the book.
@@ -315,10 +313,10 @@ public class DownloadService implements Observer<DownloadEvent> {
       LogHelper.d(TAG, "after downloadEngine.download \n\n\n");
     } catch (Exception e) {
       LogHelper.e(TAG, e, "Error getting download engine: " + e.getMessage());
-      return DOWNLOAD_ERROR;
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
     }
 
-    return DOWNLOAD_RUNNING;
+    return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
   }
 
 
@@ -329,17 +327,17 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param contentId  book to delete
    * @return
    */
-  public Integer deleteDownload(String contentId) {
+  public DOWNLOAD_STATUS deleteDownload(String contentId) {
     DeleteRequest deleteRequest = DeleteRequest.builder().contentId(contentId).build();
 
     try {
       this.getDownloadEngine().delete(deleteRequest);
     } catch (Exception e) {
       LogHelper.e(TAG, e, "Error deleting a download: " + e.getMessage());
-      return DOWNLOAD_ERROR;
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
     }
 
-    return DELETE_REQUESTED;
+    return DOWNLOAD_STATUS.DELETE_REQUESTED;
   }
 
 
@@ -351,7 +349,7 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public List<DownloadRequest> findDownloadRequests(String contentId) {
-    List<DownloadRequest> foundRequests = null;
+    List<DownloadRequest> foundRequests = new ArrayList<DownloadRequest>();
     if (contentId == null) {
       return foundRequests;
     }
@@ -374,11 +372,11 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param contentId  book to cancel
    * @return
    */
-  public Integer cancelDownload(String contentId) {
+  public DOWNLOAD_STATUS cancelDownload(String contentId) {
     List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
     if ((foundRequests == null) || (foundRequests.size() == 0)) {
       // nothing to do here
-      return DOWNLOAD_CANCELED;
+      return DOWNLOAD_STATUS.DOWNLOAD_CANCELED;
     }
 
     for (DownloadRequest request : foundRequests) {
@@ -386,11 +384,11 @@ public class DownloadService implements Observer<DownloadEvent> {
         this.getDownloadEngine().cancel(request);
       } catch (Exception e) {
         LogHelper.e(TAG, e, "Error canceling a download request: " + e.getMessage());
-        return DOWNLOAD_ERROR;
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
       }
     }
 
-    return DOWNLOAD_CANCELED;
+    return DOWNLOAD_STATUS.DOWNLOAD_CANCELED;
   }
 
 
@@ -401,23 +399,23 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param contentId  book to pause download of
    * @return
    */
-  public Integer pauseDownload(String contentId) {
+  public DOWNLOAD_STATUS pauseDownload(String contentId) {
     List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
     if ((foundRequests == null) || (foundRequests.size() == 0)) {
       // nothing to do here
-      return DOWNLOAD_PAUSED;
+      return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
     }
 
     for (DownloadRequest request : foundRequests) {
       try {
         this.getDownloadEngine().pause(request);
       } catch (Exception e) {
-        LogHelper.e(TAG, e, "Error pausing a download request: " + e.getMessage());
-        return DOWNLOAD_ERROR;
+        LogHelper.e(TAG, e, "Error pausing a download request: ", e.getMessage());
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
       }
     }
 
-    return DOWNLOAD_PAUSED;
+    return DOWNLOAD_STATUS.DOWNLOAD_PAUSED;
   }
 
 
@@ -428,23 +426,23 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @param contentId  book to download
    * @return
    */
-  public Integer resumeDownload(String contentId) {
+  public DOWNLOAD_STATUS resumeDownload(String contentId) {
     List<DownloadRequest> foundRequests = this.findDownloadRequests(contentId);
     if ((foundRequests == null) || (foundRequests.size() == 0)) {
       // nothing to do here
-      return DOWNLOAD_ERROR;
+      return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
     }
 
     for (DownloadRequest request : foundRequests) {
       try {
         this.getDownloadEngine().download(request);
       } catch (Exception e) {
-        LogHelper.e(TAG, e, "Error resuming a download request: " + e.getMessage());
-        return DOWNLOAD_ERROR;
+        LogHelper.e(TAG, e, "Error resuming a download request: ", e.getMessage());
+        return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
       }
     }
 
-    return DOWNLOAD_RUNNING;
+    return DOWNLOAD_STATUS.DOWNLOAD_RUNNING;
   }
 
 
@@ -553,6 +551,7 @@ public class DownloadService implements Observer<DownloadEvent> {
     } else {
       // download event is not an error, whee
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
+
         // if download is resuming from not the first chapter, then it's ok not to show the toast
         // if there is an introduction, it will be labeled as chapter 0, and it's ok not to show the toast until
         // the first chapter is being downloaded.
@@ -569,7 +568,7 @@ public class DownloadService implements Observer<DownloadEvent> {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
 
         callbackActivity.resetDownloadProgress();
-        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
         // TODO: ungray the chapter in the table of contents
@@ -578,17 +577,20 @@ public class DownloadService implements Observer<DownloadEvent> {
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
-        //callbackActivity.setDownloadProgress(100, 100, DOWNLOAD_SUCCESS);
+
+        callbackActivity.setDownloadProgress(100, 100, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
-        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
-        //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
+
+        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
         callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
@@ -603,5 +605,4 @@ public class DownloadService implements Observer<DownloadEvent> {
   /* ------------------------------------ /DOWNLOAD EVENT HANDLERS ------------------------------------- */
 
 
-
-  }
+}

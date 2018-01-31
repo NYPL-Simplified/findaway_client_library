@@ -185,27 +185,27 @@ public class PlayBookFragment extends BaseFragment {
   /**
    * Change the message on the download button, letting the user know where we are in the downloading progress.
    */
-  public void redrawDownloadButton(Integer status) {
+  public void redrawDownloadButton(DownloadService.DOWNLOAD_STATUS status) {
     if (status == null) {
       return;
     }
 
-    if (status.equals(DownloadService.DOWNLOAD_RUNNING)) {
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_RUNNING)) {
       //downloadButton.setText(getString(R.string.pause));
       return;
     }
 
-    if (status.equals(DownloadService.DOWNLOAD_PAUSED)) {
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_PAUSED)) {
       //downloadButton.setText(getString(R.string.resume));
       return;
     }
 
-    if (status.equals(DownloadService.DOWNLOAD_STOPPED)) {
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED)) {
       //downloadButton.setText(getString(R.string.start));
       return;
     }
 
-    if (status.equals(DownloadService.DOWNLOAD_ERROR)) {
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_ERROR)) {
       //downloadButton.setText(getString(R.string.alert));
       return;
     }

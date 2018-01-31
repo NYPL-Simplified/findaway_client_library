@@ -272,14 +272,14 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
     // We know what book this activity is to be playing.  Does this book need any downloading?
     // Check to see all the book files have successfully downloaded.
-    Integer downloadStatus = downloadService.getDownloadStatus(contentId);
+    DownloadService.DOWNLOAD_STATUS downloadStatus = downloadService.getDownloadStatus(contentId);
     // If not, ask the DownloadService to either start or resume the download.
-    if (downloadStatus.equals(DownloadService.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_NEEDED)) {
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_NEEDED)) {
       // ask to start the download
       downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
     }
 
-    if (downloadStatus.equals(DownloadService.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_PAUSED)) {
+    if (downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_PAUSED)) {
       // TODO:  do not see a "resume" method in the sdk.  for now, will form a new download request.
       // Test that, if I send in multiple requests with same info, it's equivalent to asking to resume the download
       // Test that resuming after a stop works, and what happens if app shuts down and is restored.
@@ -699,7 +699,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
    * @param primaryProgress
    * @param secondaryProgress
    */
-  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, Integer status) {
+  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, DownloadService.DOWNLOAD_STATUS status) {
     if (playBookFragment != null) {
       playBookFragment.redrawDownloadProgress(primaryProgress, secondaryProgress);
 
