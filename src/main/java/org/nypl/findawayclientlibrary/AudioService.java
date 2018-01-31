@@ -43,21 +43,19 @@ public class AudioService {
     return audioEngine;
   }
 
+
   /**
    * AudioEngine needs the sessionKey that comes from the Bibliotheca
    * https://partner.yourcloudlibrary.com/cirrus/library/[libraryId]/GetItemAudioFulfillment endpoint.
    */
   public void initAudioEngine(android.content.Context context) {
-    //try {
+    try {
       AudioEngine.init(context, sessionId, LogLevel.VERBOSE);
       audioEngine = AudioEngine.getInstance();
-    //} catch (AudioEngineException e) {
-      //LogHelper.e(TAG, "Error getting audio engine: " + e.getMessage());
-      //e.printStackTrace();
-    //} catch (Exception e) {
-      //LogHelper.e(TAG, "Error getting audio engine: " + e.getMessage());
-      //e.printStackTrace();
-    //}
+    } catch (Exception e) {
+      LogHelper.e(TAG, e, "Error getting audio engine: ", e.getMessage());
+      //TODO: should never happen.  but if it does, kick user back to book detail screen and apologize
+    }
   }
 
 

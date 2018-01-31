@@ -11,7 +11,7 @@
     <string name="chapterPercentage">Chapter %d%%</string>
     <string name="contentPercentage">Total %d%%</string>
 
-    <string name="downloadStarted">Download started.</string>
+    <string name="downloadStarted">Downloading Your Audiobook.</string>
     <string name="downloadPaused">Download paused.</string>
     <string name="downloadCancelled">Download cancelled.</string>
     <string name="downloadComplete">Download complete.</string>
@@ -51,4 +51,5 @@
 
     <string name="title_activity_playbook">Play Audio Book</string>
     <string name="deleteAllContentComplete">All content deleted for this book.</string>
+    <string name="pause_download">Pause Download</string>
 </resources>

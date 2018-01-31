@@ -28,9 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 
-import io.audioengine.mobile.DownloadEvent;
-import io.audioengine.mobile.PlaybackEvent;
-//import io.audioengine.mobile.StringUtils;
 
 
 /**
@@ -43,8 +40,6 @@ import io.audioengine.mobile.PlaybackEvent;
  * Created by daryachernikhova on 7/21/17.
  */
 public class PlayBookFragment extends BaseFragment {
-  // so can filter all log msgs belonging to my app
-  //private final String APP_TAG = "FSLIB.";
 
   // so can do a search in log msgs for just this class's output
   private final String TAG = APP_TAG + "PlayBookFragment";
@@ -56,11 +51,12 @@ public class PlayBookFragment extends BaseFragment {
   private FloatingActionButton downloadButton;
   // non-user-interactive, usually used to show download progress
   private ProgressBar downloadProgress;
-  private ProgressBar downloadProgress2;
   private TextView chapterPercentage, contentPercentage;
 
   private TextView currentTime, remainingTime;
-  private ImageButton previousButton, backButton, playButton, forwardButton, nextButton;
+  private FloatingActionButton playButton;
+  //private ImageButton previousButton, nextButton;
+  private ImageButton backButton, forwardButton;
   private ToggleButton playbackSpeedButton;
 
   // interactive, both shows progress and allows user to control
@@ -116,20 +112,20 @@ public class PlayBookFragment extends BaseFragment {
     // set up the UI elements that will give download info
     downloadButton = (FloatingActionButton) fragmentView.findViewById(R.id.download_button);
     downloadProgress = (ProgressBar) fragmentView.findViewById(R.id.download_progress);
-    downloadProgress2 = (ProgressBar) fragmentView.findViewById(R.id.download_progress_2);
-    chapterPercentage = (TextView) fragmentView.findViewById(R.id.chapter_download_percentage);
-    contentPercentage = (TextView) fragmentView.findViewById(R.id.content_download_percentage);
+
+    //chapterPercentage = (TextView) fragmentView.findViewById(R.id.chapter_download_percentage);
+    //contentPercentage = (TextView) fragmentView.findViewById(R.id.content_download_percentage);
 
     // tell the download buttons the parent activity will be listening to them
     //downloadButton.setOnClickListener((View.OnClickListener) callbackActivity);
     //downloadButton.setOnLongClickListener((View.OnLongClickListener) callbackActivity);
 
     // set up the UI elements that will give playback info
-    previousButton = (ImageButton) fragmentView.findViewById(R.id.previous_track_button);
+    //previousButton = (ImageButton) fragmentView.findViewById(R.id.previous_track_button);
     backButton = (ImageButton) fragmentView.findViewById(R.id.rewind_button);
-    playButton = (ImageButton) fragmentView.findViewById(R.id.play_pause_button);
+    playButton = (FloatingActionButton) fragmentView.findViewById(R.id.play_pause_button);
     forwardButton = (ImageButton) fragmentView.findViewById(R.id.forward_button);
-    nextButton = (ImageButton) fragmentView.findViewById(R.id.next_track_button);
+    //nextButton = (ImageButton) fragmentView.findViewById(R.id.next_track_button);
     playbackSeekBar = (SeekBar) fragmentView.findViewById(R.id.playback_seek_bar);
     //playbackSpeedButton = (ToggleButton) fragmentView.findViewById(R.id.playback_speed_button);
 
@@ -137,11 +133,11 @@ public class PlayBookFragment extends BaseFragment {
     remainingTime = (TextView) fragmentView.findViewById(R.id.playback_time_remaining);
 
     // tell the playback buttons the parent activity will be listening to them
-    previousButton.setOnClickListener((View.OnClickListener) callbackActivity);
+    //previousButton.setOnClickListener((View.OnClickListener) callbackActivity);
     backButton.setOnClickListener((View.OnClickListener) callbackActivity);
     playButton.setOnClickListener((View.OnClickListener) callbackActivity);
     forwardButton.setOnClickListener((View.OnClickListener) callbackActivity);
-    nextButton.setOnClickListener((View.OnClickListener) callbackActivity);
+    //nextButton.setOnClickListener((View.OnClickListener) callbackActivity);
     playbackSeekBar.setOnSeekBarChangeListener((SeekBar.OnSeekBarChangeListener) callbackActivity);
     //playbackSpeedButton.setOnClickListener((View.OnClickListener) callbackActivity);
 
@@ -280,12 +276,10 @@ public class PlayBookFragment extends BaseFragment {
   public void redrawDownloadProgress(Integer primaryProgress, Integer secondaryProgress) {
     downloadProgress.setProgress(primaryProgress);
     // downloadProgress.setSecondaryProgress(secondaryProgress);
-    contentPercentage.setText(getString(R.string.contentPercentage, primaryProgress));
-    chapterPercentage.setText(getString(R.string.chapterPercentage, secondaryProgress));
 
-
-    downloadProgress2.setProgress(primaryProgress);
-    //downloadProgress2.setSecondaryProgress(secondaryProgress);
+    // textview feedback of percentages will either go away completely, or move to another location in UI
+    //contentPercentage.setText(getString(R.string.contentPercentage, primaryProgress));
+    //chapterPercentage.setText(getString(R.string.chapterPercentage, secondaryProgress));
   }
 
 
@@ -344,7 +338,7 @@ public class PlayBookFragment extends BaseFragment {
       // load image as Drawable
       Drawable coverImageDrawable = Drawable.createFromStream(coverImageStream, "Book Cover Image");
       if (coverImageDrawable != null) {
-        // TODO: bring back  coverImage.setImageDrawable(coverImageDrawable);
+        coverImage.setImageDrawable(coverImageDrawable);
 
         coverImageDrawable.getBounds();
       }

@@ -3,10 +3,9 @@ package org.nypl.findawayclientlibrary;
 import java.io.File;
 import java.util.List;
 
-import android.content.Context;
 import android.os.Environment;
-//import android.widget.Toast;
 
+import io.audioengine.mobile.Chapter;
 import rx.Observer;
 import rx.Observable;
 import rx.Subscription;
@@ -465,23 +464,6 @@ public class DownloadService implements Observer<DownloadEvent> {
   public void onError(Throwable e) {
     LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
     e.printStackTrace();
-    // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
-    /*
-    11.324 5192-5192/org.nypl.findawaysdkdemo W/System.err: rx.exceptions.MissingBackpressureException
-    11-17 22:18:11.329 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.onNext(OperatorObserveOn.java:160)
-    11-17 22:18:11.334 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.onNext(OperatorSubscribeOn.java:53)
-    11-17 22:18:11.338 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.RelaySubscriptionManager$RelayObserver.onNext(RelaySubscriptionManager.java:205)
-    11-17 22:18:11.342 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.PublishRelay.call(PublishRelay.java:47)
-    11-17 22:18:11.346 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedAction1.call(SerializedAction1.java:84)
-    11-17 22:18:11.350 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedRelay.call(SerializedRelay.java:20)
-    11-17 22:18:11.354 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.PlayerEventBus.send(PlayerEventBus.java:33)
-    11-17 22:18:11.358 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.FindawayMediaPlayer.onPlayerStateChanged(FindawayMediaPlayer.java:373)
-    11-17 22:18:11.363 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl.handleEvent(ExoPlayerImpl.java:206)
-    11-17 22:18:11.368 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl$1.handleMessage(ExoPlayerImpl.java:65)
-    11-17 22:18:11.371 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Handler.dispatchMessage(Handler.java:102)
-    11-17 22:18:11.375 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Looper.loop(Looper.java:154)
-    11-17 22:18:11.379 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.HandlerThread.run(HandlerThread.java:61)
-    */
   }
 
 
@@ -527,6 +509,8 @@ public class DownloadService implements Observer<DownloadEvent> {
     LogHelper.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
 
 
+    Chapter chapter = downloadEvent.chapter();
+
     if (downloadEvent.isError()) {
       // TODO: in future branch, handle errors, don't just output to log and screen and forget
       callbackActivity.notifyDownloadEvent("Download error occurred: " + downloadEvent.message());
@@ -561,16 +545,20 @@ public class DownloadService implements Observer<DownloadEvent> {
         // which would be hard to catch based on a string message, but common enough to need handling.
 
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADED.equals(downloadEvent.code())) {
-        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
+        LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADED");
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADING.equals(downloadEvent.code())) {
-        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
+        LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADING");
       }
 
     } else {
       // download event is not an error, whee
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
-        // TODO: make sure all string messages are coming in from R.string
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
+        // if download is resuming from not the first chapter, then it's ok not to show the toast
+        // if there is an introduction, it will be labeled as chapter 0, and it's ok not to show the toast until
+        // the first chapter is being downloaded.
+        if (chapter != null && new Integer(1).equals(chapter.chapter())) {
+          callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
+        }
         //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_RUNNING);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
@@ -584,7 +572,8 @@ public class DownloadService implements Observer<DownloadEvent> {
         //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
+        // TODO: ungray the chapter in the table of contents
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
         //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), 100, DOWNLOAD_RUNNING);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
@@ -592,12 +581,12 @@ public class DownloadService implements Observer<DownloadEvent> {
         //callbackActivity.setDownloadProgress(100, 100, DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
         //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
         //callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STOPPED);
 
@@ -613,39 +602,6 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   /* ------------------------------------ /DOWNLOAD EVENT HANDLERS ------------------------------------- */
 
-
-
-    // TODO:  getting E/SQLiteLog: (1) no such table: listenedEvents
-    // don't think it's related to the download error.
-
-    // NOTE:  if I use the wrong license to init AudioEngine with, I get download error, with message:
-    // Download Event e6c50396-904a-4511-a5c0-acfbf9573401: 31051
-    // and code 31051, which corresponds to HTTP_ERROR (see this api page for all error codes:
-    // http://developer.audioengine.io/sdk/android/v7/download-engine ).
-    // and also the chapter object is all nulled when onNext isError.
-    // The downloadEvent stack trace is not helpful, but you can see helpful info in the stack trace
-    // that's thrown from the findaway internal sdk code:
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo E/FDLIB.PlayBookActivity: before making downloadRequest, part=0, chapter=1
-    // 10-30 19:45:33.548 8316-8316/org.nypl.findawaysdkdemo I/System.out: Sending AutoValue_DownloadRequest to onNext. Observers? true
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/83380/playlists http/1.1
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Type: application/json; charset=UTF-8
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: Content-Length: 71
-    // 10-30 19:45:33.549 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: --> END POST
-    // 10-30 19:45:33.550 1455-1482/? W/audio_hw_generic: Not supplying enough data to HAL, expected position 3501424 , only wrote 3501360
-    // 10-30 19:45:33.595 8316-8378/org.nypl.findawaysdkdemo D/OkHttp: <-- 400 Bad Request https://api.findawayworld.com/v4/audiobooks/83380/playlists (45ms)
-    // and some nicer stack trace, coming from the findaway sdk:
-    // 10-30 19:54:28.605 13497-15009/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.persistence.Download.getPlaylist(Download.java:649)
-
-      /*
-      01-05 17:50:16.844 9665-9711/org.nypl.audiobooklibrarydemoapp I/System.out: Sending PlayNextRequest to onNext. Observers? true
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> POST https://api.findawayworld.com/v4/audiobooks/102244/playlists http/1.1
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Type: application/json; charset=UTF-8
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: Content-Length: 41
-      01-05 17:50:16.847 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: --> END POST
-      01-05 17:50:16.884 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.896 9665-9683/org.nypl.audiobooklibrarydemoapp D/EGL_emulation: eglMakeCurrent: 0xa8885300: ver 2 0 (tinfo 0xa8883320)
-      01-05 17:50:16.971 9665-9717/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- 200 OK https://api.findawayworld.com/v4/audiobooks/102244/playlists (123ms)
-       */
 
 
   }

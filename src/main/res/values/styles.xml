@@ -1,13 +1,21 @@
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme_NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- AppTheme_NoActionBar_Findaway is so named so's not to conflict with any theme
+     we might want to add to the "no drm/RBDigital" side of the project.  Ideally,
+     we'll have a base theme that inherits from Theme.AppCompat.Light.NoActionBar, and then
+     if we need provider-specific styling, we'll have AppTheme_NoActionBar_Findaway inherit from
+     that base theme. -->
+    <style name="AppTheme_NoActionBar_Findaway" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimary">@color/colorPrimary1</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorAccent">@color/colorAccent1</item>
+        <item name="statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:colorBackground">@color/colorPrimaryLight</item>
+        <item name="android:textColorPrimary">@color/textColorPrimary1</item>
 
-        <!-- windowActionBar is same as android:windowActionBar, but AppCompat stuff looks at the app namespace attribute not the android one.
+        <!-- windowActionBar is same as android:windowActionBar,
+        but AppCompat stuff looks at the app namespace attribute not the android one.
         This makes it possible to specify the attribute even in platforms that didn't originally have it.
         Having said that, might not need these if have NoActionBar. -->
         <!-- item name="windowActionBar">false</item>
@@ -29,6 +37,10 @@
         <item name="android:ellipsize">end</item>
     </style>
 
-    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar"/>
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
 
 </resources>
