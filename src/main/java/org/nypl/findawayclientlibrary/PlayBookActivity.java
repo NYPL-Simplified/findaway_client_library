@@ -560,12 +560,13 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
               LogHelper.d(TAG, "playback FWD10 button clicked");
               playbackService.getPlaybackEngine().seekTo(playbackService.getPlaybackEngine().getPosition() + 10000);
             } else {
-              if (view.getId() == R.id.previous_track_button) {
-                playbackService.getPlaybackEngine().previousChapter();
-              } else {
-                if (view.getId() == R.id.next_track_button) {
-                  playbackService.getPlaybackEngine().nextChapter();
-                } else {
+              //if (view.getId() == R.id.previous_track_button) {
+              //  playbackService.getPlaybackEngine().previousChapter();
+              //} else {
+                //if (view.getId() == R.id.next_track_button) {
+                  //playbackService.getPlaybackEngine().nextChapter();
+                //} else {
+
                   /*
                  // TODO: call from drop-down menu
                   if (view.getId() == R.id.playback_speed_button) {
@@ -586,8 +587,8 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
                     */
                   LogHelper.e(TAG, "Cannot recognize clicked button.");
                   //}
-                }
-              }
+                //}
+              //}
             }
           }
         }
@@ -747,93 +748,3 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 }
 
 
-/*
-* TODO:  when click play, get this error.  make sure that catching it safely.  the error itself might be for another reason:
-*
-* 01-03 00:11:23.608 8172-9037/org.nypl.audiobooklibrarydemoapp D/OkHttp: <-- HTTP FAILED: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
-01-03 00:11:23.609 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: java.lang.RuntimeException: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.exceptions.Exceptions.propagate(Exceptions.java:58)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observables.BlockingObservable.blockForSingle(BlockingObservable.java:464)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observables.BlockingObservable.first(BlockingObservable.java:167)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager.streamingChapter(RequestManager.java:325)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager$8.call(RequestManager.java:276)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at io.audioengine.mobile.play.RequestManager$8.call(RequestManager.java:265)
-01-03 00:11:23.610 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.onNext(OnSubscribeMap.java:69)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.onNext(OperatorTake.java:76)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:45)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:22)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observers.Subscribers$5.onNext(Subscribers.java:235)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.emit(OperatorOnBackpressureLatest.java:165)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.onNext(OperatorOnBackpressureLatest.java:131)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestSubscriber.onNext(OperatorOnBackpressureLatest.java:211)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.call(OperatorObserveOn.java:224)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.schedulers.CachedThreadScheduler$EventLoopWorker$1.call(CachedThreadScheduler.java:230)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.schedulers.ScheduledAction.run(ScheduledAction.java:55)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:428)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.FutureTask.run(FutureTask.java:237)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:272)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-01-03 00:11:23.611 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.lang.Thread.run(Thread.java:761)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: java.net.UnknownHostException: Unable to resolve host "api.findawayworld.com": No address associated with hostname
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:125)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupAllHostAddr(Inet6AddressImpl.java:74)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.InetAddress.getAllByName(InetAddress.java:752)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.Dns$1.lookup(Dns.java:39)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.resetNextInetSocketAddress(RouteSelector.java:170)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.nextProxy(RouteSelector.java:136)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.RouteSelector.next(RouteSelector.java:81)
-01-03 00:11:23.612 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.findConnection(StreamAllocation.java:171)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.findHealthyConnection(StreamAllocation.java:121)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.StreamAllocation.newStream(StreamAllocation.java:100)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.java:42)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.java:93)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.java:93)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.java:120)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.logging.HttpLoggingInterceptor.intercept(HttpLoggingInterceptor.java:212)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:92)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.java:67)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.RealCall.getResponseWithInterceptorChain(RealCall.java:179)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at okhttp3.RealCall.execute(RealCall.java:63)
-01-03 00:11:23.613 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.OkHttpCall.execute(OkHttpCall.java:174)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$RequestArbiter.request(RxJavaCallAdapterFactory.java:171)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1$1.request(OperatorSubscribeOn.java:80)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1$1.request(OperatorTake.java:109)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.Subscriber.setProducer(Subscriber.java:211)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.setProducer(OperatorTake.java:93)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeFilter$FilterSubscriber.setProducer(OnSubscribeFilter.java:104)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.setProducer(OnSubscribeMap.java:102)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.setProducer(OperatorSubscribeOn.java:76)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$CallOnSubscribe.call(RxJavaCallAdapterFactory.java:152)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at retrofit2.adapter.rxjava.RxJavaCallAdapterFactory$CallOnSubscribe.call(RxJavaCallAdapterFactory.java:138)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.Observable.unsafeSubscribe(Observable.java:10142)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1.call(OperatorSubscribeOn.java:94)
-01-03 00:11:23.614 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 8 more
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: android.system.GaiException: android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at libcore.io.Posix.android_getaddrinfo(Native Method)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at libcore.io.ForwardingOs.android_getaddrinfo(ForwardingOs.java:55)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at java.net.Inet6AddressImpl.lookupHostByName(Inet6AddressImpl.java:106)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 48 more
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: Caused by: rx.exceptions.OnErrorThrowable$OnNextValue: OnError while emitting onNext value: null
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OnSubscribeMap$MapSubscriber.onNext(OnSubscribeMap.java:73)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorTake$1.onNext(OperatorTake.java:76)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:45)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at com.squareup.sqlbrite.QueryToOneOperator$1.onNext(QueryToOneOperator.java:22)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.observers.Subscribers$5.onNext(Subscribers.java:235)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.emit(OperatorOnBackpressureLatest.java:165)
-01-03 00:11:23.615 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestEmitter.onNext(OperatorOnBackpressureLatest.java:131)
-01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorOnBackpressureLatest$LatestSubscriber.onNext(OperatorOnBackpressureLatest.java:211)
-01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.call(OperatorObserveOn.java:224)
-01-03 00:11:23.616 8172-9035/org.nypl.audiobooklibrarydemoapp W/System.err: 	... 8 more
-*
-*
-* */
