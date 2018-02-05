@@ -8,7 +8,6 @@ import android.os.Environment;
 
 import io.audioengine.mobile.Chapter;
 import rx.Observer;
-import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -62,6 +61,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // local var to store subscription to events that track status changes from the DownloadEngine
   Subscription eventsSubscriptionStatus = null;
+
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -181,7 +181,7 @@ public class DownloadService implements Observer<DownloadEvent> {
         public void onNext(Integer progress) {
           LogHelper.d(TAG, "Got initial download progress ", progress);
 
-          callbackActivity.setDownloadProgress(progress, 0, null);
+          callbackActivity.drawDownloadProgressButton(progress, 0, null);
         }
       }); //downloadEngine.progress.subscribe
     } catch (Exception e) {
@@ -544,6 +544,8 @@ public class DownloadService implements Observer<DownloadEvent> {
 
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADED.equals(downloadEvent.code())) {
         LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADED");
+        // TODO: ungray the chapter in the TOC
+
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADING.equals(downloadEvent.code())) {
         LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADING");
       }
@@ -551,6 +553,7 @@ public class DownloadService implements Observer<DownloadEvent> {
     } else {
       // download event is not an error, whee
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
+        // DOWNLOAD_STARTED gets called for every chapter that is to be downloaded, not just for the whole book.
 
         // if download is resuming from not the first chapter, then it's ok not to show the toast
         // if there is an introduction, it will be labeled as chapter 0, and it's ok not to show the toast until
@@ -558,41 +561,57 @@ public class DownloadService implements Observer<DownloadEvent> {
         if (chapter != null && new Integer(1).equals(chapter.chapter())) {
           callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
         }
-        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_RUNNING);
+        //callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_RUNNING);
+
+        // tell the activity to start drawing the download progress bar
+        //callbackActivity.downloadStarting();
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadPaused));
-        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_PAUSED);
+        //callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_PAUSED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
 
+        // tell the activity to stop drawing the download progress bar
+        callbackActivity.downloadStopping();
+
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
         // TODO: ungray the chapter in the table of contents
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
-        //callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), 100, DOWNLOAD_RUNNING);
+        if (chapter != null) {
+          // TODO: Danger, we're assuming that there is no introduction (chapter 0), and that the book is chapterized, and that
+          // there's only one part, instead of uniquely identifying a chapter.  This is very raw proof of concept for now,
+          // just to practice drawing the TOC.
+          callbackActivity.drawDownloadProgressTableOfContents(chapter.chapter());
+        }
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
 
-        callbackActivity.setDownloadProgress(100, 100, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
+        // tell the activity to stop drawing the download progress bar
+        callbackActivity.downloadStopping();
+
+        callbackActivity.drawDownloadProgressButton(100, 100, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
 
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
         //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
 
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
+        // callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
+        //LogHelper.e(TAG, "downloadEvent.contentPercentage()=", downloadEvent.contentPercentage());
         callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
 
       } else {

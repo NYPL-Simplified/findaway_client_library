@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import android.support.annotation.NonNull;
+import android.support.design.internal.NavigationMenuView;
 import android.support.design.widget.NavigationView;
 
 import android.support.v4.view.GravityCompat;
@@ -22,11 +23,18 @@ import android.widget.Toast;
 
 import org.nypl.findawayclientlibrary.util.LogHelper;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import android.os.Handler;
+
 
 
 /**
  * Loads and exchanges fragments that are responsible for audio player UI
- * and audiobook-associated sub-screens.
+ * and audiobook-associated sub-screens.  Is responsible for responding to events
+ * and stimuli, while delegating the UI drawing to the child fragments.
  *
  * Starts and communicates with the download portion of the sdk (through the DownloadService).
  * Starts and communicates with the audio playing portion of the sdk (through the PlaybackService).
@@ -81,6 +89,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
   String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
   String sessionIdReal7 = "8718066c-3aa9-4353-803c-f7dd3c829e40";
+  String sessionIdFake1 = "00000000-0000-0000-0000-000000000000";
 
 
   // Kevin's test value
@@ -114,6 +123,35 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   private PlaybackService playbackService = new PlaybackService(APP_TAG, audioService, this);
   // fulfills books
   private DownloadService downloadService = new DownloadService(APP_TAG, audioService, this);
+
+  // will be updated by the download event handler, so can update progress on the UI from a timed thread
+  // percent of entire book that's been downloaded, last we were informed
+  Integer lastDownloadProgressTotal = 0;
+  // percent of currently downloading chapter that's been downloaded, last we were informed
+  Integer lastDowloadProgressChapter = 0;
+  // is the current download running?
+  DownloadService.DOWNLOAD_STATUS lastDownloadProgressStatus = DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED;
+
+  private final Runnable taskUpdateDownloadProgress = new Runnable() {
+    @Override
+    public void run() {
+      LogHelper.e(TAG, "taskUpdateDownloadProgress.run()");
+      drawDownloadProgressButton();
+    }
+  };
+
+  // taskUpdateDownloadProgress | scheduleDownloadProgressUpdate |
+  // stopDownloadProgressUpdate
+  // todo: turn off progress bar completely, and see if the ui locks up during download,
+  // just because the DownloadService is running on the UI thread right now.
+
+  private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+  private ScheduledFuture<?> scheduledFuture;
+  private final Handler threadHandler = new Handler();
+  // in milliseconds
+  private static final long PROGRESS_UPDATE_TIME_INTERVAL = 5000;
+  // in milliseconds
+  private static final long PROGRESS_UPDATE_INITIAL_DELAY = 1000;
 
 
 
@@ -226,6 +264,85 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
     // ask the AudioEngine to start a DownloadEngine
     downloadService.initDownloadEngine();
+    /*
+          Intent i = new Intent(context, AudioService.class);
+          i.setAction(AudioService.ACTION_CMD);
+          i.putExtra(AudioService.CMD_NAME, AudioService.CMD_PAUSE);
+          startService(i);
+--
+    startService(new Intent(getApplicationContext(), AudioService.class));
+---
+  // we will play audio in the AudioService
+  private AudioService audioService = null;
+  private Intent playIntent = null;
+  private boolean isMusicServiceBound = false;
+
+then
+
+    if (playIntent == null) {
+      playIntent = new Intent(this, AudioService.class);
+
+      // BIND_AUTO_CREATE recreates the Service if it is destroyed when there’s a bounding client
+      boolean bound = bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
+      Log.d(TAG, SUB_TAG + "bound=" + bound);
+
+      // TODO: ?? Every call to this method will result in a corresponding call to the target service's
+      // android.app.Service.onStartCommand method, with the intent given here.
+      // This provides a convenient way to submit jobs to a service without having to bind and call on to its interface.
+      // TODO: redundant after binding the service?  remove and hope.
+      //startService(playIntent);
+
+      // NOTE:  don't have to stop the IntentService as it calls stopSelf() internally when it needs.
+    }
+
+    then also:
+      @Override
+  protected void onDestroy() {
+    stopService(playIntent);
+    audioService = null;
+    super.onDestroy();
+  }
+
+
+and then this:
+  / * *
+   * We are going to play the music in the Service class, but control it from the Activity class, where the application's user interface operates.
+   * To accomplish this, we will have to bind to the Service class, which we do here.
+   * /
+    private ServiceConnection musicConnection = new ServiceConnection() {
+
+      @Override
+      public void onServiceConnected(ComponentName name, IBinder service) {
+        Log.d(TAG, SUB_TAG + "musicConnection.onServiceConnected");
+
+        AudioService.MusicBinder binder = (AudioService.MusicBinder)service;
+        // get service
+        audioService = binder.getService();
+
+        // pass chapter list
+        // NOTE: If the service is Local (not IntentService), setChapters execution happens on the thread of the calling client/activity (this UI thread).
+        // If wish to call a long-running operation, then spin a new background thread in the called service method.
+        audioService.setChapters(chapters);
+        isMusicServiceBound = true;
+      }
+
+      @Override
+      public void onServiceDisconnected(ComponentName name) {
+        audioService = null;
+        isMusicServiceBound = false;
+      }
+    };
+
+--
+
+Regardless of whether your application is started, bound, or both, any application component can use the service (even from a separate application) in the same way that any component can use an activity—by starting it with an Intent. However, you can declare the service as private in the manifest file and block access from other applications. This is discussed more in the section about Declaring the service in the manifest.
+
+Caution: A service runs in the main thread of its hosting process; the service does not create its own thread and does not run in a separate process unless you specify otherwise. If your service is going to perform any CPU-intensive work or blocking operations, such as MP3 playback or networking, you should create a new thread within the service to complete that work. By using a separate thread, you can reduce the risk of Application Not Responding (ANR) errors, and the application's main thread can remain dedicated to user interaction with your activities.
+
+
+
+
+     */
 
     // ask the AudioEngine to start a PlaybackEngine
     playbackService.initPlaybackEngine();
@@ -234,11 +351,14 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /**
-   * Do nothing.
+   * Clean up for garbage collection.
    */
   @Override
   protected void onDestroy() {
     super.onDestroy();
+    if (scheduledExecutorService != null) {
+      scheduledExecutorService.shutdown();
+    }
   }
 
 
@@ -277,6 +397,9 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     if (downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_ERROR) || downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_NEEDED)) {
       // ask to start the download
       downloadService.downloadAudio(contentId, license, currentlyDownloadingChapter, null);
+
+      // prepare to periodically update UI as download proceeds
+      this.downloadStarting();
     }
 
     if (downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED) || downloadStatus.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_PAUSED)) {
@@ -284,6 +407,9 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
       // Test that, if I send in multiple requests with same info, it's equivalent to asking to resume the download
       // Test that resuming after a stop works, and what happens if app shuts down and is restored.
       downloadService.resumeDownload(contentId);
+
+      // prepare to periodically update UI as download proceeds
+      this.downloadStarting();
     }
 
     playbackService.subscribePlayEventsAll(playbackService);
@@ -360,22 +486,12 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
     final Menu menu = tocNavigationView.getMenu();
 
     int groupId = R.id.group_chapter_menu;
-    for (int menuItemId = 10; menuItemId <= 13; menuItemId++) {
+    for (int menuItemId = 1; menuItemId <= 13; menuItemId++) {
       int order = menuItemId;
       MenuItem menuItem = menu.add(groupId, menuItemId, order, "Chapter " + menuItemId);
       menuItem.setIcon(R.drawable.ic_radio_button_unchecked_black_24dp);
       menuItem.setCheckable(true);
-    }
-
-    // code from SO to update the nav menu through its adapter.  I don't think it should be necessary, but testing here:
-    for (int i = 0, count = tocNavigationView.getChildCount(); i < count; i++) {
-      final View child = tocNavigationView.getChildAt(i);
-      if (child != null && child instanceof ListView) {
-        final ListView menuView = (ListView) child;
-        //final HeaderViewListAdapter adapter = (HeaderViewListAdapter) menuView.getAdapter();
-        //final BaseAdapter wrapped = (BaseAdapter) adapter.getWrappedAdapter();
-        //wrapped.notifyDataSetChanged();
-      }
+      menuItem.setEnabled(false);
     }
   }
 
@@ -512,6 +628,18 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Display or log notifications related to playback events.
+   * Limit to only displaying when situation warrants, s.a. during development.
+   * @param message
+   */
+  public void notifyPlayEvent(String message) {
+    // have more toast notifications when developing than on prod
+    if (LogHelper.getVerbosity() == LogHelper.DEV) {
+      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+  }
 
 
   @Override
@@ -653,17 +781,66 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /**
-   * TODO:  What connections do we have to the Findaway player, to be able to implement media controls
-   * (play/pause/rewind X seconds, ff X seconds, seek bar, playback speed, etc.)?
-   *
+   * Ask the fragment to update the seek bar.
    */
-  private void scheduleSeekbarUpdate() {
+  public void setPlayProgress(Long duration, Long position) {
+    if (playBookFragment != null) {
+      playBookFragment.redrawPlaybackPosition(duration, position);
+    }
   }
 
   /* ------------------------------------ /PLAYBACK EVENT HANDLERS ------------------------------------- */
 
 
-  /* ------------------------------------ UI METHODS ------------------------------------- */
+  /* ------------------------------------ DOWNLOAD METHODS ------------------------------------- */
+
+  /**
+   * Lets this activity know that it should start drawing/updating the download progress view.
+   */
+  public void downloadStarting() {
+    LogHelper.e(TAG, "downloadStarting");
+    scheduleDownloadProgressUpdate();
+  }
+
+
+  /**
+   * Lets this activity know that it should stop drawing/updating the download progress view.
+   */
+  public void downloadStopping() {
+    LogHelper.e(TAG, "downloadStopping");
+    stopDownloadProgressUpdate();
+  }
+
+
+  /**
+   * Start the regularly scheduled UI updates of the download progress bar.
+   */
+  private void scheduleDownloadProgressUpdate() {
+    stopDownloadProgressUpdate();
+    LogHelper.e(TAG, "scheduleDownloadProgressUpdate");
+    if (!scheduledExecutorService.isShutdown()) {
+      scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
+        new Runnable() {
+          @Override
+          public void run() {
+            threadHandler.post(taskUpdateDownloadProgress);
+          }
+        }, PROGRESS_UPDATE_INITIAL_DELAY,
+        PROGRESS_UPDATE_TIME_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+  }
+
+
+  /**
+   * Stop the regularly scheduled UI updates of the download progress bar.
+   */
+  private void stopDownloadProgressUpdate() {
+    LogHelper.e(TAG, "stopDownloadProgressUpdate");
+    if (scheduledFuture != null) {
+      scheduledFuture.cancel(false);
+    }
+  }
+
 
   /**
    * Display or log notifications related to download events.
@@ -679,29 +856,29 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /**
-   * Display or log notifications related to playback events.
-   * Limit to only displaying when situation warrants, s.a. during development.
-   * @param message
+   * Call an update on the download progress UI elements with whatever we have stored
+   * as our last known progress counts.
    */
-  public void notifyPlayEvent(String message) {
-    // have more toast notifications when developing than on prod
-    if (LogHelper.getVerbosity() == LogHelper.DEV) {
-      Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
+  public void drawDownloadProgressButton() {
+    LogHelper.e(TAG, "drawDownloadProgressButton");
+    drawDownloadProgressButton(lastDownloadProgressTotal, lastDowloadProgressChapter, lastDownloadProgressStatus);
   }
 
 
   /**
    * Update the download progress bar, and any other download-associated UI elements
    * to reflect current download status (passed in).
-   * TODO: make sure passing non-null enum for status from DownloadService line 187.
    *
-   * @param primaryProgress
-   * @param secondaryProgress
+   * @param primaryProgress  ex: percent of total content downloaded
+   * @param secondaryProgress  ex: percent of chapter downloaded
+   * @param status  ex: "running"/"paused"/etc.
    */
-  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, DownloadService.DOWNLOAD_STATUS status) {
+  public void drawDownloadProgressButton(Integer primaryProgress, Integer secondaryProgress, DownloadService.DOWNLOAD_STATUS status) {
     if (playBookFragment != null) {
       playBookFragment.redrawDownloadProgress(primaryProgress, secondaryProgress);
+
+      // if null, use a default value
+      if (status == null) {  status = DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED;  }
 
       // change the download button's icon and text
       playBookFragment.redrawDownloadButton(status);
@@ -710,9 +887,45 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /**
+   * Accept a chapter id that's been downloaded, and ungray the chapter in the TOC.
    *
+   * @param downloadedChapter The chapter that's just finished downloading.
+   */
+  public void drawDownloadProgressTableOfContents(Integer downloadedChapter) {
+    if (tocNavigationView == null) {  return;  }
+    LogHelper.d(TAG, "drawDownloadProgressTableOfContents: tocNavigationView.getChildCount()=", tocNavigationView.getChildCount());
+
+    // TODO: Danger, we're assuming that there is no introduction (chapter 0), and that the book is chapterized, and that
+    // there's only one part, instead of uniquely identifying a chapter.  This is very raw proof of concept for now,
+    // just to practice drawing the TOC.
+    final View child = tocNavigationView.getChildAt(downloadedChapter-1);
+    //tocNavigationView.getMenu().getItem(downloadedChapter-1).setEnabled(true);
+
+    if (child != null) {
+      child.setEnabled(true);
+    }
+
+    // code from SO to update the nav menu through its adapter.  I don't think it should be necessary, but testing here:
+    //for (int i = 0, count = tocNavigationView.getChildCount(); i < count; i++) {
+      //final View child = tocNavigationView.getChildAt(i);
+      //if (child != null && child instanceof ListView) {
+        //final ListView menuView = (ListView) child;
+        //final HeaderViewListAdapter adapter = (HeaderViewListAdapter) menuView.getAdapter();
+        //final BaseAdapter wrapped = (BaseAdapter) adapter.getWrappedAdapter();
+        //wrapped.notifyDataSetChanged();
+      //}
+    //}
+  }
+
+
+  /**
+   * Reset the UI to show no downloads currently in progress.
    */
   public void resetDownloadProgress() {
+    lastDownloadProgressTotal = 0;
+    lastDowloadProgressChapter = 0;
+    lastDownloadProgressStatus = DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED;
+
     if (playBookFragment != null) {
       playBookFragment.resetDownloadProgress();
     }
@@ -720,16 +933,20 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
 
 
   /**
-   * Ask the fragment to update the seek bar.
+   * Update download progress tracking internal variables.
+   *
+   * @param primaryProgress
+   * @param secondaryProgress
+   * @param status
    */
-  public void setPlayProgress(Long duration, Long position) {
-    if (playBookFragment != null) {
-      playBookFragment.redrawPlaybackPosition(duration, position);
-    }
+  public void setDownloadProgress(Integer primaryProgress, Integer secondaryProgress, DownloadService.DOWNLOAD_STATUS status) {
+    lastDownloadProgressTotal = primaryProgress;
+    lastDowloadProgressChapter = secondaryProgress;
+    lastDownloadProgressStatus = status;
   }
 
 
-  /* ------------------------------------ /UI METHODS ------------------------------------- */
+  /* ------------------------------------ /DOWNLOAD METHODS ------------------------------------- */
 
 
   /* ------------------------------------ UTILITY METHODS ------------------------------------- */

@@ -183,107 +183,6 @@ public class PlayBookFragment extends BaseFragment {
 
 
   /**
-   * Change the message on the download button, letting the user know where we are in the downloading progress.
-   */
-  public void redrawDownloadButton(DownloadService.DOWNLOAD_STATUS status) {
-    if (status == null) {
-      return;
-    }
-
-    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_RUNNING)) {
-      //downloadButton.setText(getString(R.string.pause));
-      return;
-    }
-
-    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_PAUSED)) {
-      //downloadButton.setText(getString(R.string.resume));
-      return;
-    }
-
-    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED)) {
-      //downloadButton.setText(getString(R.string.start));
-      return;
-    }
-
-    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_ERROR)) {
-      //downloadButton.setText(getString(R.string.alert));
-      return;
-    }
-  }
-
-
-  /**
-   * Change message and pic on play button to match current state.
-   *
-   * @param newText
-   * @param newImageId
-   */
-  public void redrawPlayButton(String newText, int newImageId) {
-    // TODO: check that code works on kitkat.  if yes, then don't need the "if (checkAndroidVersion() < Build.VERSION_CODES.LOLLIPOP) {"
-    // line in audiobookplaylibrary/PlayBookFragment.  if no, then need that line here.
-    playButton.setImageResource(newImageId);
-    playButton.setTag(newText);
-  }
-
-
-  /**
-   * Move the seek bar to reflect the current playback position within the book chapter.
-   * Making sure the passed event is of type progress update happens in the calling code.
-   *
-   * @param duration
-   * @param position
-   */
-  public void redrawPlaybackPosition(Long duration, Long position) {
-    // TODO: intValue may overflow, and 0 may not be best default value.  fix to handle.
-    int max = duration != null ? duration.intValue() : 0;
-    int progress = position != null ? position.intValue() : 0;
-    playbackSeekBar.setMax(max);
-    playbackSeekBar.setProgress(progress);
-
-    currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
-    remainingTime.setText(DateTimeUtil.millisToHumanReadable(max - progress));
-  }
-
-
-  /**
-   * Move the audio playback position in response to user shifting the seek bar.
-   *
-   * @param seekBar
-   * @param progress
-   * @param fromUser
-   */
-  public void redrawPlaybackPosition(SeekBar seekBar, int progress, boolean fromUser) {
-    if (fromUser) {
-      if (seekBar.getId() == this.playbackSeekBar.getId()) {
-        currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
-
-        // TODO: need to update remaining time?  can combine with method above?
-      }
-    }
-  }
-
-
-  /**
-   * Update the progress bar to reflect where we are in the downloading.
-   * While both the primary and secondary progress percentages are being passed in,
-   * ignore the secondary, and only update the primary for now.  Updating the chapters
-   * is happening too much and thrashing the UI.  To use the secondaryProgress as per chapter
-   * download indicators, will want to take the UI update onto a separate thread.
-   *
-   * @param primaryProgress Represents percent of total book download.
-   * @param secondaryProgress Represents percent of currently downloading chapter.
-   */
-  public void redrawDownloadProgress(Integer primaryProgress, Integer secondaryProgress) {
-    downloadProgress.setProgress(primaryProgress);
-    // downloadProgress.setSecondaryProgress(secondaryProgress);
-
-    // textview feedback of percentages will either go away completely, or move to another location in UI
-    //contentPercentage.setText(getString(R.string.contentPercentage, primaryProgress));
-    //chapterPercentage.setText(getString(R.string.chapterPercentage, secondaryProgress));
-  }
-
-
-  /**
    * Set the display to reflect whether we're reading at increased speed.
    *
    * @param checked
@@ -293,12 +192,9 @@ public class PlayBookFragment extends BaseFragment {
     //playbackSpeedButton.setChecked(checked);
   }
 
-
-  public void resetDownloadProgress() {
-    this.redrawDownloadProgress(0, 0);
-  }
-
   /* ---------------------------------- /LIFECYCLE METHODS ----------------------------------- */
+
+
 
   /* ------------------------------------ NAVIGATION EVENT HANDLERS ------------------------------------- */
 
@@ -364,7 +260,116 @@ public class PlayBookFragment extends BaseFragment {
 
 
 
+  /* ------------------------------------ DOWNLOAD EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Change the message on the download button, letting the user know where we are in the downloading progress.
+   */
+  public void redrawDownloadButton(DownloadService.DOWNLOAD_STATUS status) {
+    if (status == null) {
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_RUNNING)) {
+      //downloadButton.setText(getString(R.string.pause));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_PAUSED)) {
+      //downloadButton.setText(getString(R.string.resume));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_STOPPED)) {
+      //downloadButton.setText(getString(R.string.start));
+      return;
+    }
+
+    if (status.equals(DownloadService.DOWNLOAD_STATUS.DOWNLOAD_ERROR)) {
+      //downloadButton.setText(getString(R.string.alert));
+      return;
+    }
+  }
+
+
+  /**
+   * Update the progress bar to reflect where we are in the downloading.
+   * While both the primary and secondary progress percentages are being passed in,
+   * ignore the secondary, and only update the primary for now.  Updating the chapters
+   * is happening too much and thrashing the UI.  To use the secondaryProgress as per chapter
+   * download indicators, will want to take the UI update onto a separate thread.
+   *
+   * @param primaryProgress Represents percent of total book download.
+   * @param secondaryProgress Represents percent of currently downloading chapter.
+   */
+  public void redrawDownloadProgress(Integer primaryProgress, Integer secondaryProgress) {
+    downloadProgress.setProgress(primaryProgress);
+    // downloadProgress.setSecondaryProgress(secondaryProgress);
+
+    // textview feedback of percentages will either go away completely, or move to another location in UI
+    //contentPercentage.setText(getString(R.string.contentPercentage, primaryProgress));
+    //chapterPercentage.setText(getString(R.string.chapterPercentage, secondaryProgress));
+  }
+
+
+  public void resetDownloadProgress() {
+    this.redrawDownloadProgress(0, 0);
+  }
+  /* ------------------------------------ /DOWNLOAD EVENT HANDLERS ------------------------------------- */
+
+
+
   /* ------------------------------------ PLAYBACK EVENT HANDLERS ------------------------------------- */
+
+  /**
+   * Change message and pic on play button to match current state.
+   *
+   * @param newText
+   * @param newImageId
+   */
+  public void redrawPlayButton(String newText, int newImageId) {
+    // TODO: check that code works on kitkat.  if yes, then don't need the "if (checkAndroidVersion() < Build.VERSION_CODES.LOLLIPOP) {"
+    // line in audiobookplaylibrary/PlayBookFragment.  if no, then need that line here.
+    playButton.setImageResource(newImageId);
+    playButton.setTag(newText);
+  }
+
+
+  /**
+   * Move the seek bar to reflect the current playback position within the book chapter.
+   * Making sure the passed event is of type progress update happens in the calling code.
+   *
+   * @param duration
+   * @param position
+   */
+  public void redrawPlaybackPosition(Long duration, Long position) {
+    // TODO: intValue may overflow, and 0 may not be best default value.  fix to handle.
+    int max = duration != null ? duration.intValue() : 0;
+    int progress = position != null ? position.intValue() : 0;
+    playbackSeekBar.setMax(max);
+    playbackSeekBar.setProgress(progress);
+
+    currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
+    remainingTime.setText(DateTimeUtil.millisToHumanReadable(max - progress));
+  }
+
+
+  /**
+   * Move the audio playback position in response to user shifting the seek bar.
+   *
+   * @param seekBar
+   * @param progress
+   * @param fromUser
+   */
+  public void redrawPlaybackPosition(SeekBar seekBar, int progress, boolean fromUser) {
+    if (fromUser) {
+      if (seekBar.getId() == this.playbackSeekBar.getId()) {
+        currentTime.setText(DateTimeUtil.millisToHumanReadable(progress));
+
+        // TODO: need to update remaining time?  can combine with method above?
+      }
+    }
+  }
 
 
   /* ------------------------------------ /PLAYBACK EVENT HANDLERS ------------------------------------- */
