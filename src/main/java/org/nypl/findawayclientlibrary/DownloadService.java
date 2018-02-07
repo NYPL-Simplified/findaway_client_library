@@ -4,11 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.content.Context;
 import android.os.Environment;
 
+import io.audioengine.mobile.Chapter;
 import rx.Observer;
-import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -62,6 +61,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // local var to store subscription to events that track status changes from the DownloadEngine
   Subscription eventsSubscriptionStatus = null;
+
 
 
   public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
@@ -181,7 +181,7 @@ public class DownloadService implements Observer<DownloadEvent> {
         public void onNext(Integer progress) {
           LogHelper.d(TAG, "Got initial download progress ", progress);
 
-          callbackActivity.setDownloadProgress(progress, 0, null);
+          callbackActivity.drawDownloadProgressButton(progress, 0, null);
         }
       }); //downloadEngine.progress.subscribe
     } catch (Exception e) {
@@ -226,6 +226,11 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
+    // TODO: remove the hardcoding to always return that needs to download (for debugging right now)
+    if (true) {
+      return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
+    }
+
     // GIGO
     if (contentId == null) {
       return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
@@ -457,23 +462,6 @@ public class DownloadService implements Observer<DownloadEvent> {
   public void onError(Throwable e) {
     LogHelper.e(TAG, "There was an error in the download or playback process: " + e.getMessage());
     e.printStackTrace();
-    // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
-    /*
-    11.324 5192-5192/org.nypl.findawaysdkdemo W/System.err: rx.exceptions.MissingBackpressureException
-    11-17 22:18:11.329 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.onNext(OperatorObserveOn.java:160)
-    11-17 22:18:11.334 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.onNext(OperatorSubscribeOn.java:53)
-    11-17 22:18:11.338 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.RelaySubscriptionManager$RelayObserver.onNext(RelaySubscriptionManager.java:205)
-    11-17 22:18:11.342 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.PublishRelay.call(PublishRelay.java:47)
-    11-17 22:18:11.346 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedAction1.call(SerializedAction1.java:84)
-    11-17 22:18:11.350 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedRelay.call(SerializedRelay.java:20)
-    11-17 22:18:11.354 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.PlayerEventBus.send(PlayerEventBus.java:33)
-    11-17 22:18:11.358 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.FindawayMediaPlayer.onPlayerStateChanged(FindawayMediaPlayer.java:373)
-    11-17 22:18:11.363 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl.handleEvent(ExoPlayerImpl.java:206)
-    11-17 22:18:11.368 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl$1.handleMessage(ExoPlayerImpl.java:65)
-    11-17 22:18:11.371 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Handler.dispatchMessage(Handler.java:102)
-    11-17 22:18:11.375 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Looper.loop(Looper.java:154)
-    11-17 22:18:11.379 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.HandlerThread.run(HandlerThread.java:61)
-    */
   }
 
 
@@ -519,6 +507,8 @@ public class DownloadService implements Observer<DownloadEvent> {
     LogHelper.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
 
 
+    Chapter chapter = downloadEvent.chapter();
+
     if (downloadEvent.isError()) {
       // TODO: in future branch, handle errors, don't just output to log and screen and forget
       callbackActivity.notifyDownloadEvent("Download error occurred: " + downloadEvent.message());
@@ -553,46 +543,75 @@ public class DownloadService implements Observer<DownloadEvent> {
         // which would be hard to catch based on a string message, but common enough to need handling.
 
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADED.equals(downloadEvent.code())) {
-        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
+        LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADED");
+        // TODO: ungray the chapter in the TOC
+
       } else if (DownloadEvent.CHAPTER_ALREADY_DOWNLOADING.equals(downloadEvent.code())) {
-        LogHelper.e(TAG, "DownloadEvent.NOT_ENOUGH_SPACE_ERROR");
+        LogHelper.d(TAG, "DownloadEvent.CHAPTER_ALREADY_DOWNLOADING");
       }
 
     } else {
       // download event is not an error, whee
       if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_STARTED)) {
-        // TODO: make sure all string messages are coming in from R.string
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_RUNNING);
+        // DOWNLOAD_STARTED gets called for every chapter that is to be downloaded, not just for the whole book.
+
+        // if download is resuming from not the first chapter, then it's ok not to show the toast
+        // if there is an introduction, it will be labeled as chapter 0, and it's ok not to show the toast until
+        // the first chapter is being downloaded.
+        if (chapter != null && new Integer(1).equals(chapter.chapter())) {
+          callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadStarted));
+        }
+        //callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_RUNNING);
+
+        // tell the activity to start drawing the download progress bar
+        //callbackActivity.downloadStarting();
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PAUSED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadPaused));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_PAUSED);
+        //callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), DOWNLOAD_PAUSED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_CANCELLED)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadCancelled));
+
+        // tell the activity to stop drawing the download progress bar
+        callbackActivity.downloadStopping();
 
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.CHAPTER_DOWNLOAD_COMPLETED)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
+        // TODO: ungray the chapter in the table of contents
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.chapterDownloaded, downloadEvent.chapter().friendlyName()));
+        if (chapter != null) {
+          // TODO: Danger, we're assuming that there is no introduction (chapter 0), and that the book is chapterized, and that
+          // there's only one part, instead of uniquely identifying a chapter.  This is very raw proof of concept for now,
+          // just to practice drawing the TOC.
+          callbackActivity.drawDownloadProgressTableOfContents(chapter.chapter());
+        }
 
       } else if (downloadEvent.code().equals(DownloadEvent.CONTENT_DOWNLOAD_COMPLETED)) {
         callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.downloadComplete));
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
+
+        // tell the activity to stop drawing the download progress bar
+        callbackActivity.downloadStopping();
+
+        callbackActivity.drawDownloadProgressButton(100, 100, DOWNLOAD_STATUS.DOWNLOAD_SUCCESS);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_COMPLETE)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DELETE_ALL_CONTENT_COMPLETE)) {
-        callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
+        //callbackActivity.notifyDownloadEvent(callbackActivity.getString(R.string.deleteAllContentComplete));
         callbackActivity.resetDownloadProgress();
-        callbackActivity.setDownloadProgress(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
+
+        callbackActivity.drawDownloadProgressButton(0, 0, DOWNLOAD_STATUS.DOWNLOAD_STOPPED);
 
       } else if (downloadEvent.code().equals(DownloadEvent.DOWNLOAD_PROGRESS_UPDATE)) {
+        // callbackActivity.drawDownloadProgressButton(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
+        //LogHelper.e(TAG, "downloadEvent.contentPercentage()=", downloadEvent.contentPercentage());
         callbackActivity.setDownloadProgress(downloadEvent.contentPercentage(), downloadEvent.chapterPercentage(), null);
 
       } else {
@@ -603,7 +622,6 @@ public class DownloadService implements Observer<DownloadEvent> {
   }// onNext(DownloadEvent)
 
   /* ------------------------------------ /DOWNLOAD EVENT HANDLERS ------------------------------------- */
-
 
 
 }

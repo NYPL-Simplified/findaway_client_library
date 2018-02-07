@@ -1,14 +1,11 @@
 package org.nypl.findawayclientlibrary;
 
-//import android.widget.Toast;
-
 import rx.android.schedulers.AndroidSchedulers;
 import rx.Observer;
 import rx.schedulers.Schedulers;
 import rx.Subscription;
 
 import io.audioengine.mobile.AudioEngineException;
-//import io.audioengine.mobile.config.LogLevel;
 import io.audioengine.mobile.PlaybackEngine;
 import io.audioengine.mobile.PlaybackEvent;
 import io.audioengine.mobile.PlayRequest;
@@ -117,6 +114,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
       playbackEngine = audioService.getAudioEngine().getPlaybackEngine();
     } catch (AudioEngineException e) {
       LogHelper.e(TAG, "Error getting playback engine: " + e.getMessage());
+      // TODO
       e.printStackTrace();
     } catch (Exception e) {
       LogHelper.e(TAG, "Error getting playback engine: " + e.getMessage());
@@ -205,23 +203,6 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   public void onError(Throwable e) {
     LogHelper.e(TAG, "There was an error in the playback process: " + e.getMessage());
     e.printStackTrace();
-    // TODO: why am I seeing rx.exceptions.MissingBackpressureException on playback speed change?
-    /*
-    11.324 5192-5192/org.nypl.findawaysdkdemo W/System.err: rx.exceptions.MissingBackpressureException
-    11-17 22:18:11.329 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorObserveOn$ObserveOnSubscriber.onNext(OperatorObserveOn.java:160)
-    11-17 22:18:11.334 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at rx.internal.operators.OperatorSubscribeOn$1$1.onNext(OperatorSubscribeOn.java:53)
-    11-17 22:18:11.338 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.RelaySubscriptionManager$RelayObserver.onNext(RelaySubscriptionManager.java:205)
-    11-17 22:18:11.342 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.PublishRelay.call(PublishRelay.java:47)
-    11-17 22:18:11.346 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedAction1.call(SerializedAction1.java:84)
-    11-17 22:18:11.350 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.jakewharton.rxrelay.SerializedRelay.call(SerializedRelay.java:20)
-    11-17 22:18:11.354 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.PlayerEventBus.send(PlayerEventBus.java:33)
-    11-17 22:18:11.358 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at io.audioengine.mobile.play.FindawayMediaPlayer.onPlayerStateChanged(FindawayMediaPlayer.java:373)
-    11-17 22:18:11.363 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl.handleEvent(ExoPlayerImpl.java:206)
-    11-17 22:18:11.368 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at com.google.android.exoplayer.ExoPlayerImpl$1.handleMessage(ExoPlayerImpl.java:65)
-    11-17 22:18:11.371 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Handler.dispatchMessage(Handler.java:102)
-    11-17 22:18:11.375 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.Looper.loop(Looper.java:154)
-    11-17 22:18:11.379 5192-5192/org.nypl.findawaysdkdemo W/System.err:     at android.os.HandlerThread.run(HandlerThread.java:61)
-    */
   }
 
 
