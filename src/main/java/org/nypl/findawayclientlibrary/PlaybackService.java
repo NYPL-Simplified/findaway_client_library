@@ -121,6 +121,11 @@ public class PlaybackService implements Observer<PlaybackEvent> {
       e.printStackTrace();
     }
 
+    // This is set to "true" by default in the Findaway SDK, but let's make it explicit.
+    // We want the Findaway SDK to hear the audio focus change events broadcast by the OS,
+    // and to respond to them by pausing, resuming, or ducking.  
+    playbackEngine.manageAudioFocus(true);
+
     seekTo = 0;
     lastPlaybackPosition = 0;
   }
