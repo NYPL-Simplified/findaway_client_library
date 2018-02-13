@@ -9,7 +9,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -21,8 +20,8 @@ import android.widget.ToggleButton;
 import com.bugsnag.android.BreadcrumbType;
 import com.bugsnag.android.Bugsnag;
 
-import org.nypl.findawayclientlibrary.util.DateTimeUtil;
-import org.nypl.findawayclientlibrary.util.LogHelper;
+import org.nypl.audiobookincludes.util.DateTimeUtil;
+import org.nypl.audiobookincludes.util.LogHelper;
 
 import java.io.IOException;
 import java.io.InputStream;

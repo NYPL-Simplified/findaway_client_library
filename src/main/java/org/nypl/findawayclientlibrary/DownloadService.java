@@ -20,7 +20,7 @@ import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
 import io.audioengine.mobile.DownloadType;
 
-import org.nypl.findawayclientlibrary.util.LogHelper;
+import org.nypl.audiobookincludes.util.LogHelper;
 
 
 
@@ -48,7 +48,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
   // by this class to be reflected in the app's UI.
-  private PlayBookActivity callbackActivity = null;
+  private org.nypl.audiobookincludes.PlayBookActivity callbackActivity = null;
 
   // fulfills books
   DownloadEngine downloadEngine = null;
@@ -64,7 +64,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
 
 
-  public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
+  public DownloadService(String APP_TAG, AudioService audioService, org.nypl.audiobookincludes.PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "DownloadService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
@@ -226,11 +226,6 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
-    // TODO: remove the hardcoding to always return that needs to download (for debugging right now)
-    if (true) {
-      return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
-    }
-
     // GIGO
     if (contentId == null) {
       return DOWNLOAD_STATUS.DOWNLOAD_ERROR;

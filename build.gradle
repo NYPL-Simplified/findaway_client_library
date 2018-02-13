@@ -70,4 +70,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     //implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.bugsnag:bugsnag-android:4.1.4'
+
+    // contains common interfaces and such
+    compile project(':audiobookincludes')
 }

@@ -10,7 +10,7 @@ import io.audioengine.mobile.PlaybackEngine;
 import io.audioengine.mobile.PlaybackEvent;
 import io.audioengine.mobile.PlayRequest;
 
-import org.nypl.findawayclientlibrary.util.LogHelper;
+import org.nypl.audiobookincludes.util.LogHelper;
 
 
 
@@ -35,7 +35,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
   // by this class to be reflected in the app's UI.
-  private PlayBookActivity callbackActivity = null;
+  private org.nypl.audiobookincludes.PlayBookActivity callbackActivity = null;
 
   // plays drm-ed audio
   private PlaybackEngine playbackEngine = null;
@@ -49,7 +49,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   long lastPlaybackPosition;
 
 
-  public PlaybackService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
+  public PlaybackService(String APP_TAG, AudioService audioService, org.nypl.audiobookincludes.PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "PlaybackService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
@@ -123,7 +123,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
     // This is set to "true" by default in the Findaway SDK, but let's make it explicit.
     // We want the Findaway SDK to hear the audio focus change events broadcast by the OS,
-    // and to respond to them by pausing, resuming, or ducking.  
+    // and to respond to them by pausing, resuming, or ducking.
     playbackEngine.manageAudioFocus(true);
 
     seekTo = 0;

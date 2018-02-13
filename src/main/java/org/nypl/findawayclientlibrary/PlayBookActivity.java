@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import android.support.annotation.NonNull;
-import android.support.design.internal.NavigationMenuView;
 import android.support.design.widget.NavigationView;
 
 import android.support.v4.view.GravityCompat;
@@ -17,11 +16,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
-import org.nypl.findawayclientlibrary.util.LogHelper;
+import org.nypl.audiobookincludes.util.LogHelper;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -170,7 +168,7 @@ public class PlayBookActivity extends BaseActivity implements NavigationView.OnN
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.findaway_playback_activity_main);
+    setContentView(R.layout.findaway_activity_play_book);
 
     // change the title displayed in the top bar from the app name (default) to something indicative
     //getSupportActionBar().setTitle("Audio Player UI Here");

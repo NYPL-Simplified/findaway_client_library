@@ -17,7 +17,7 @@
 
     <item
         android:id="@+id/action_rewind_interval"
-        android:icon="@drawable/ic_rewind_interval_20s"
+        android:icon="@drawable/ic_20_seconds"
         android:title="@string/action_rewind_interval"
         app:showAsAction="always"/>
 
