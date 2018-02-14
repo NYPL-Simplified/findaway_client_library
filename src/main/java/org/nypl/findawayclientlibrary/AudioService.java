@@ -4,6 +4,7 @@ import io.audioengine.mobile.AudioEngine;
 import io.audioengine.mobile.LogLevel;
 
 import org.nypl.audiobookincludes.util.LogHelper;
+import org.nypl.audiobookincludes.ManifestModel;
 
 
 /**
@@ -124,7 +125,7 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
   }
 
 
-  public void subscribeEvents(String audiobookManifest, boolean unsubscribeDownload, boolean unsubscribePlay) {
+  public void subscribeEvents(ManifestModel audiobookManifest, boolean unsubscribeDownload, boolean unsubscribePlay) {
     // a stream of _all_ download events for the supplied content id
     // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
     downloadService.subscribeDownloadEventsAll(downloadService, contentId);
@@ -144,13 +145,13 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
 
 
   @Override
-  public DOWNLOAD_STATUS getDownloadStatus(String audiobookManifest) {
+  public DOWNLOAD_STATUS getDownloadStatus(ManifestModel audiobookManifest) {
     return downloadService.getDownloadStatus(contentId);
   }
 
 
   @Override
-  public DOWNLOAD_STATUS downloadAudio(String audiobookManifest, Integer chapter, Integer part) {
+  public DOWNLOAD_STATUS downloadAudio(ManifestModel audiobookManifest, Integer chapter, Integer part) {
     // ask to start the download
     return downloadService.downloadAudio(contentId, licenseId, chapter, part);
   }
@@ -175,13 +176,13 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
 
 
   @Override
-  public DOWNLOAD_STATUS resumeDownload(String audiobookManifest) {
+  public DOWNLOAD_STATUS resumeDownload(ManifestModel audiobookManifest) {
     return downloadService.resumeDownload(contentId);
   }
 
 
   @Override
-  public Integer playAudio(String audiobookManifest, Integer chapter, Integer part) {
+  public Integer playAudio(ManifestModel audiobookManifest, Integer chapter, Integer part) {
     return playbackService.playAudio(contentId, licenseId, chapter, null);
   }
 
