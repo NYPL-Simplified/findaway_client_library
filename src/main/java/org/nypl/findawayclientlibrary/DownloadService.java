@@ -52,6 +52,11 @@ public class DownloadService implements Observer<DownloadEvent> {
   // by this class to be reflected in the app's UI.
   private org.nypl.audiobookincludes.PlayBookActivity callbackActivity = null;
 
+  // receives deletion-related notifications, for when we're operating the DownloadService from the
+  // book's detail page in the host app, having only an included fragment to show deletion progress,
+  // rather than a whole activity screen
+  private org.nypl.audiobookincludes.DeleteBookFragment callbackFragment = null;
+
   // fulfills books
   DownloadEngine downloadEngine = null;
 
@@ -71,6 +76,14 @@ public class DownloadService implements Observer<DownloadEvent> {
     //this.sessionId = sessionId;
     this.audioService = audioService;
     this.callbackActivity = callbackActivity;
+  }
+
+
+  public DownloadService(String APP_TAG, AudioService audioService, org.nypl.audiobookincludes.DeleteBookFragment callbackFragment) {
+    TAG = APP_TAG + "DownloadService";
+    //this.sessionId = sessionId;
+    this.audioService = audioService;
+    this.callbackFragment = callbackFragment;
   }
 
 

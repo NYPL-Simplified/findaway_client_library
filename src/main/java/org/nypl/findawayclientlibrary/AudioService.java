@@ -88,7 +88,11 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
 
 
   /**
-   * TODO:  don't necessarily want to be passing the callbackActivity, may not want backend to update UI.
+   * TODO: lazy init -- if I started AudioEngine to delete a file, and now I want to play a file,
+   * then find the previously made clases, and just attach the callbackactivity to them.
+   *
+   * Init the Download and Playback functionality-handling classes with the activity that will
+   * be accepting status update notifications.
    *
    * @param context
    * @param callbackActivity
@@ -104,6 +108,24 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
 
     // fulfills books
     downloadService = new DownloadService(APP_TAG, this, callbackActivity);
+
+    // ask the AudioEngine to start a DownloadEngine
+    downloadService.initDownloadEngine();
+  }
+
+
+  /**
+   * TODO doc
+   * TODO lazy init if already had callbackactivity before
+   *
+   * @param context
+   * @param callbackFragment
+   */
+  public void init(android.content.Context context, org.nypl.audiobookincludes.DeleteBookFragment callbackFragment) {
+    this.initAudioEngine(context);
+
+    // fulfills books
+    downloadService = new DownloadService(APP_TAG, this, callbackFragment);
 
     // ask the AudioEngine to start a DownloadEngine
     downloadService.initDownloadEngine();
