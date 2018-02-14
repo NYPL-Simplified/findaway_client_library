@@ -21,7 +21,7 @@ import io.audioengine.mobile.DownloadRequest;
 import io.audioengine.mobile.DownloadType;
 
 import org.nypl.audiobookincludes.util.LogHelper;
-
+import org.nypl.audiobookincludes.AudioService.DOWNLOAD_STATUS;
 
 
 /**
@@ -38,11 +38,13 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
 
+  /*
   public static enum DOWNLOAD_STATUS {
     DOWNLOAD_ERROR, DOWNLOAD_SUCCESS,
     DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
     DOWNLOAD_CANCELED, DELETE_REQUESTED
   }
+  */
   
   private AudioService audioService;
 

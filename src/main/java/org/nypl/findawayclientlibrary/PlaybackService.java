@@ -44,7 +44,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   Subscription eventsSubscriptionAll = null;
 
   // tracks where the audio playback should be, as far as the seek bar knows
-  int seekTo;
+  long seekTo;
   // tracks where in the file the audio playback has last played
   long lastPlaybackPosition;
 
@@ -70,7 +70,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
    * Gets knowledge of current position on the seek bar.
    * @return
    */
-  public int getSeekTo() {
+  public long getSeekTo() {
     return seekTo;
   }
 
@@ -79,7 +79,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
    * Sets knowledge of current position on the seek bar.
    * @param seekTo
    */
-  public void setSeekTo(int seekTo) {
+  public void setSeekTo(long seekTo) {
     this.seekTo = seekTo;
   }
 
@@ -126,8 +126,8 @@ public class PlaybackService implements Observer<PlaybackEvent> {
     // and to respond to them by pausing, resuming, or ducking.
     playbackEngine.manageAudioFocus(true);
 
-    seekTo = 0;
-    lastPlaybackPosition = 0;
+    this.setSeekTo(0);
+    this.setLastPlaybackPosition(0);
   }
 
 
@@ -242,6 +242,36 @@ public class PlaybackService implements Observer<PlaybackEvent> {
       callbackActivity.notifyPlayEvent("Chapter completed.");
     }
 
+  }
+
+
+  public void pausePlayback() {
+    this.getPlaybackEngine().pause();
+  }
+
+
+  public void resumePlayback() {
+    this.getPlaybackEngine().resume();
+  }
+
+
+  public void seekTo(long milliseconds) {
+    this.setSeekTo(milliseconds);
+    this.getPlaybackEngine().seekTo(milliseconds);
+  }
+
+
+  public void seekAhead(long millisecondsToJump) {
+    long newPosition = this.getPlaybackEngine().getPosition() + millisecondsToJump;
+
+    this.seekTo(newPosition);
+  }
+
+
+  public void seekBehind(long millisecondsToJump) {
+    long newPosition = this.getPlaybackEngine().getPosition() - millisecondsToJump;
+
+    this.seekTo(newPosition);
   }
 
   /* ------------------------------------ /PLAYBACK EVENT HANDLERS ------------------------------------- */

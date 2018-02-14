@@ -124,42 +124,102 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
   }
 
 
-  public void unsubscribeEvents() {
-    downloadService.unsubscribeDownloadEventsAll();
-    playbackService.unsubscribePlayEventsAll();
+  public void subscribeEvents(String audiobookManifest, boolean unsubscribeDownload, boolean unsubscribePlay) {
+    // a stream of _all_ download events for the supplied content id
+    // the onCompleted(), onError() and onNext() methods are the ones implemented in the activity itself.
+    downloadService.subscribeDownloadEventsAll(downloadService, contentId);
+    playbackService.subscribePlayEventsAll(playbackService);
+  }
+
+
+  public void unsubscribeEvents(boolean unsubscribeDownload, boolean unsubscribePlay) {
+    if (unsubscribeDownload) {
+      downloadService.unsubscribeDownloadEventsAll();
+    }
+
+    if (unsubscribePlay) {
+      playbackService.unsubscribePlayEventsAll();
+    }
   }
 
 
   @Override
-  public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
-    return null;
+  public DOWNLOAD_STATUS getDownloadStatus(String audiobookManifest) {
+    return downloadService.getDownloadStatus(contentId);
   }
 
+
   @Override
-  public DOWNLOAD_STATUS downloadAudio(String contentId, String licenseId, Integer chapter, Integer part) {
-    return null;
+  public DOWNLOAD_STATUS downloadAudio(String audiobookManifest, Integer chapter, Integer part) {
+    // ask to start the download
+    return downloadService.downloadAudio(contentId, licenseId, chapter, part);
   }
+
 
   @Override
   public DOWNLOAD_STATUS deleteDownload(String contentId) {
-    return null;
+    return downloadService.deleteDownload(contentId);
   }
+
 
   @Override
   public DOWNLOAD_STATUS cancelDownload(String contentId) {
     return null;
   }
 
+
   @Override
   public DOWNLOAD_STATUS pauseDownload(String contentId) {
     return null;
   }
 
+
   @Override
-  public DOWNLOAD_STATUS resumeDownload(String contentId) {
-    return null;
+  public DOWNLOAD_STATUS resumeDownload(String audiobookManifest) {
+    return downloadService.resumeDownload(contentId);
   }
 
+
+  @Override
+  public Integer playAudio(String audiobookManifest, Integer chapter, Integer part) {
+    return playbackService.playAudio(contentId, licenseId, chapter, null);
+  }
+
+
+  @Override
+  public void pausePlayback() {
+    playbackService.pausePlayback();
+  }
+
+
+  @Override
+  public void resumePlayback() {
+    playbackService.resumePlayback();
+  }
+
+
+  @Override
+  public long getSeekTo() {
+    return playbackService.getSeekTo();
+  }
+
+
+  @Override
+  public void seekTo(long milliseconds) {
+    playbackService.seekTo(milliseconds);
+  }
+
+
+  @Override
+  public void seekAhead(long millisecondsToJump) {
+    playbackService.seekAhead(millisecondsToJump);
+  }
+
+
+  @Override
+  public void seekBehind(long millisecondsToJump) {
+    playbackService.seekBehind(millisecondsToJump);
+  }
 
 
 }
