@@ -471,6 +471,7 @@ public class DownloadService implements Observer<DownloadEvent> {
   @Override
   public void onNext(DownloadEvent downloadEvent) {
     // TODO: this directory-checking code is for debugging, and should not go live
+    /*
     if (callbackActivity != null) {
       File filesDir = callbackActivity.getFilesDir();
       if (filesDir.exists()) {
@@ -496,6 +497,7 @@ public class DownloadService implements Observer<DownloadEvent> {
         }
       }
     }
+    */
 
     LogHelper.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter());
     LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage());
