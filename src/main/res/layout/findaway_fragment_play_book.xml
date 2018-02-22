@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:theme="@style/AppTheme_NoActionBar"
+    android:theme="@style/AppTheme_NoActionBar_Findaway"
     tools:context="org.nypl.findawayclientlibrary.PlayBookActivity"
     >
     <!-- android:background="#044fab" -->

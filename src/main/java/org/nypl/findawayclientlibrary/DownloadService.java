@@ -20,8 +20,8 @@ import io.audioengine.mobile.DownloadEvent;
 import io.audioengine.mobile.DownloadRequest;
 import io.audioengine.mobile.DownloadType;
 
-import org.nypl.findawayclientlibrary.util.LogHelper;
-
+import org.nypl.audiobookincludes.util.LogHelper;
+import org.nypl.audiobookincludes.AudioService.DOWNLOAD_STATUS;
 
 
 /**
@@ -38,17 +38,19 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
 
+  /*
   public static enum DOWNLOAD_STATUS {
     DOWNLOAD_ERROR, DOWNLOAD_SUCCESS,
     DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
     DOWNLOAD_CANCELED, DELETE_REQUESTED
   }
+  */
   
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
   // by this class to be reflected in the app's UI.
-  private PlayBookActivity callbackActivity = null;
+  private org.nypl.audiobookincludes.PlayBookActivity callbackActivity = null;
 
   // fulfills books
   DownloadEngine downloadEngine = null;
@@ -64,7 +66,7 @@ public class DownloadService implements Observer<DownloadEvent> {
 
 
 
-  public DownloadService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
+  public DownloadService(String APP_TAG, AudioService audioService, org.nypl.audiobookincludes.PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "DownloadService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
@@ -226,11 +228,6 @@ public class DownloadService implements Observer<DownloadEvent> {
    * @return
    */
   public DOWNLOAD_STATUS getDownloadStatus(String contentId) {
-    // TODO: remove the hardcoding to always return that needs to download (for debugging right now)
-    if (true) {
-      return DOWNLOAD_STATUS.DOWNLOAD_NEEDED;
-    }
-
     // GIGO
     if (contentId == null) {
       return DOWNLOAD_STATUS.DOWNLOAD_ERROR;
@@ -474,6 +471,7 @@ public class DownloadService implements Observer<DownloadEvent> {
   @Override
   public void onNext(DownloadEvent downloadEvent) {
     // TODO: this directory-checking code is for debugging, and should not go live
+    /*
     if (callbackActivity != null) {
       File filesDir = callbackActivity.getFilesDir();
       if (filesDir.exists()) {
@@ -499,6 +497,7 @@ public class DownloadService implements Observer<DownloadEvent> {
         }
       }
     }
+    */
 
     LogHelper.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter());
     LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage());

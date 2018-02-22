@@ -10,7 +10,7 @@ import io.audioengine.mobile.PlaybackEngine;
 import io.audioengine.mobile.PlaybackEvent;
 import io.audioengine.mobile.PlayRequest;
 
-import org.nypl.findawayclientlibrary.util.LogHelper;
+import org.nypl.audiobookincludes.util.LogHelper;
 
 
 
@@ -35,7 +35,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
   // by this class to be reflected in the app's UI.
-  private PlayBookActivity callbackActivity = null;
+  private org.nypl.audiobookincludes.PlayBookActivity callbackActivity = null;
 
   // plays drm-ed audio
   private PlaybackEngine playbackEngine = null;
@@ -44,12 +44,12 @@ public class PlaybackService implements Observer<PlaybackEvent> {
   Subscription eventsSubscriptionAll = null;
 
   // tracks where the audio playback should be, as far as the seek bar knows
-  int seekTo;
+  long seekTo;
   // tracks where in the file the audio playback has last played
   long lastPlaybackPosition;
 
 
-  public PlaybackService(String APP_TAG, AudioService audioService, PlayBookActivity callbackActivity) {
+  public PlaybackService(String APP_TAG, AudioService audioService, org.nypl.audiobookincludes.PlayBookActivity callbackActivity) {
     TAG = APP_TAG + "PlaybackService";
     //this.sessionId = sessionId;
     this.audioService = audioService;
@@ -70,7 +70,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
    * Gets knowledge of current position on the seek bar.
    * @return
    */
-  public int getSeekTo() {
+  public long getSeekTo() {
     return seekTo;
   }
 
@@ -79,7 +79,7 @@ public class PlaybackService implements Observer<PlaybackEvent> {
    * Sets knowledge of current position on the seek bar.
    * @param seekTo
    */
-  public void setSeekTo(int seekTo) {
+  public void setSeekTo(long seekTo) {
     this.seekTo = seekTo;
   }
 
@@ -121,8 +121,13 @@ public class PlaybackService implements Observer<PlaybackEvent> {
       e.printStackTrace();
     }
 
-    seekTo = 0;
-    lastPlaybackPosition = 0;
+    // This is set to "true" by default in the Findaway SDK, but let's make it explicit.
+    // We want the Findaway SDK to hear the audio focus change events broadcast by the OS,
+    // and to respond to them by pausing, resuming, or ducking.
+    playbackEngine.manageAudioFocus(true);
+
+    this.setSeekTo(0);
+    this.setLastPlaybackPosition(0);
   }
 
 
@@ -237,6 +242,36 @@ public class PlaybackService implements Observer<PlaybackEvent> {
       callbackActivity.notifyPlayEvent("Chapter completed.");
     }
 
+  }
+
+
+  public void pausePlayback() {
+    this.getPlaybackEngine().pause();
+  }
+
+
+  public void resumePlayback() {
+    this.getPlaybackEngine().resume();
+  }
+
+
+  public void seekTo(long milliseconds) {
+    this.setSeekTo(milliseconds);
+    this.getPlaybackEngine().seekTo(milliseconds);
+  }
+
+
+  public void seekAhead(long millisecondsToJump) {
+    long newPosition = this.getPlaybackEngine().getPosition() + millisecondsToJump;
+
+    this.seekTo(newPosition);
+  }
+
+
+  public void seekBehind(long millisecondsToJump) {
+    long newPosition = this.getPlaybackEngine().getPosition() - millisecondsToJump;
+
+    this.seekTo(newPosition);
   }
 
   /* ------------------------------------ /PLAYBACK EVENT HANDLERS ------------------------------------- */
