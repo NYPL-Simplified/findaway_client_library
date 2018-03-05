@@ -38,14 +38,6 @@ public class DownloadService implements Observer<DownloadEvent> {
 
   public static final Integer CHAPTER_PART_DEFAULT = new Integer(0);
 
-  /*
-  public static enum DOWNLOAD_STATUS {
-    DOWNLOAD_ERROR, DOWNLOAD_SUCCESS,
-    DOWNLOAD_NEEDED, DOWNLOAD_RUNNING, DOWNLOAD_PAUSED, DOWNLOAD_STOPPED,
-    DOWNLOAD_CANCELED, DELETE_REQUESTED
-  }
-  */
-  
   private AudioService audioService;
 
   // Provides context for methods s.a. getFilesDir(), and allows events caught
@@ -483,8 +475,12 @@ public class DownloadService implements Observer<DownloadEvent> {
    */
   @Override
   public void onNext(DownloadEvent downloadEvent) {
+    // TODO: remove
+    if (true) {
+      //return;
+    }
+
     // TODO: this directory-checking code is for debugging, and should not go live
-    /*
     if (callbackActivity != null) {
       File filesDir = callbackActivity.getFilesDir();
       if (filesDir.exists()) {
@@ -502,21 +498,22 @@ public class DownloadService implements Observer<DownloadEvent> {
       }
 
       if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+        /*
         File externalFilesDir = callbackActivity.getExternalFilesDir(null);
         if (externalFilesDir.exists()) {
           LogHelper.d(TAG, "externalFilesDir.getAbsolutePath=" + externalFilesDir.getAbsolutePath());
           String[] externalFilesList = externalFilesDir.list();
           LogHelper.d(TAG, "externalFilesDir.externalFilesList=" + externalFilesList.length);
         }
+        */
       }
     }
-    */
 
-    LogHelper.d(TAG, "downloadEvent.chapter=" + downloadEvent.chapter());
-    LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=" + downloadEvent.chapterPercentage());
-    LogHelper.d(TAG, "downloadEvent.content=" + downloadEvent.content());
-    LogHelper.d(TAG, "downloadEvent.content_download_percentage=" + downloadEvent.contentPercentage());
-    LogHelper.d(TAG, "downloadEvent.toString=" + downloadEvent.toString());
+    LogHelper.d(TAG, "downloadEvent.chapter=", downloadEvent.chapter());
+    LogHelper.d(TAG, "downloadEvent.chapter_download_percentage=", downloadEvent.chapterPercentage());
+    LogHelper.d(TAG, "downloadEvent.content=", downloadEvent.content());
+    LogHelper.d(TAG, "downloadEvent.content_download_percentage=", downloadEvent.contentPercentage());
+    LogHelper.d(TAG, "downloadEvent.toString=", downloadEvent.toString());
 
 
     Chapter chapter = downloadEvent.chapter();

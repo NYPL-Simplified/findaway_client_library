@@ -33,16 +33,17 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
 
   // TODO: all the sessionId, contentId and licenseId hardcoded vars will go away.
   // Kevin's
-  String sessionIdKevin = "964b5796-c67f-492d-8024-a69f3ba9be53";
+  //String sessionIdKevin = "964b5796-c67f-492d-8024-a69f3ba9be53";
   // mine:
-  String sessionIdReal1 = "be101b8f-5013-4328-9898-5fe24b302641";
-  String sessionIdReal2 = "1a03523c-8557-49cd-a046-2560d5f21056";
-  String sessionIdReal3 = "a54406b6-76cf-4241-bbf6-7f1e8b76d7f4";
-  String sessionIdReal4 = "720ba35d-8920-4621-9749-17f7ebe56316";
-  String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
-  String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
-  String sessionIdReal7 = "8718066c-3aa9-4353-803c-f7dd3c829e40";
-  String sessionIdFake1 = "00000000-0000-0000-0000-000000000000";
+  //String sessionIdReal1 = "be101b8f-5013-4328-9898-5fe24b302641";
+  //String sessionIdReal2 = "1a03523c-8557-49cd-a046-2560d5f21056";
+  //String sessionIdReal3 = "a54406b6-76cf-4241-bbf6-7f1e8b76d7f4";
+  //String sessionIdReal4 = "720ba35d-8920-4621-9749-17f7ebe56316";
+  //String sessionIdReal5 = "3a2c87d3-29d3-4d57-8a24-ba06fd8dcf62";
+  //String sessionIdReal6 = "35b481ab-c47f-41ff-95b1-ad2ab2551181";
+  //String sessionIdReal7 = "8718066c-3aa9-4353-803c-f7dd3c829e40";
+  String sessionIdReal8 = "8f4f7eaf-6507-47ff-9371-a7068ddc1727";
+  //String sessionIdFake1 = "00000000-0000-0000-0000-000000000000";
 
 
   // Kevin's test value
@@ -55,7 +56,8 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
   // Darya's value keyed to licenseId of the book NYPL bought through Bibliotheca
   //String license = "57ff8f27afde9f3cea3c041b";
   //String license = "57db1411afde9f3e7a3c041b";
-  String licenseId = "580e7da175435e471d2e042a";
+  //String licenseId = "580e7da175435e471d2e042a";
+  String licenseId = "57ff8f27afde9f3cea3c041b";
 
 
   // plays drm-ed audio
@@ -74,7 +76,7 @@ public class AudioService implements org.nypl.audiobookincludes.AudioService {
   public AudioService(String APP_TAG, String sessionId) {
     APP_TAG = APP_TAG;
     TAG = APP_TAG + "AudioService";
-    this.sessionId = sessionId;
+    this.sessionId = sessionIdReal8;
   }
 
 
