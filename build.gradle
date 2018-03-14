@@ -56,8 +56,14 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.android.support:design:26.1.0'
     //compile 'com.android.support:support-v4:25.4.0'
-    //compile 'io.audioengine.mobile:all:7.2.9'  // production
-    compile 'io.audioengine.mobile:all:8.0.0-SNAPSHOT'
+    //compile 'io.audioengine.mobile:all:8.0.0'  // production
+
+    // for regular (non-FireOS) android builds
+    compile 'io.audioengine.mobile:all-android:8.0.1-SNAPSHOT'
+
+    // NOTE: for FireOS builds, use:
+    //compile 'io.audioengine.mobile:all-fireos:8.0.1-SNAPSHOT'
+
     // devo
     //compile 'io.reactivex:rxjava:1.0.16'
     compile 'io.reactivex:rxandroid:1.2.1'
